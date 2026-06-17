@@ -18,18 +18,49 @@ enum KeyStatus {
   revoked
 }
 
+enum CheckoutMode {
+  buy
+  sell
+}
+
+enum SessionStatus {
+  active
+  expired
+  consumed
+  revoked
+}
+
 model ApiKey {
-  id             String    @id @default(cuid())
-  publishableKey String    @unique
+  id             String           @id @default(cuid())
+  publishableKey String           @unique
   secretKeyHash  String
   secretLast4    String
-  mode           KeyMode   @default(test)
+  mode           KeyMode          @default(test)
   allowedOrigins String[]
-  status         KeyStatus @default(active)
+  status         KeyStatus        @default(active)
   label          String?
-  createdAt      DateTime  @default(now())
-  updatedAt      DateTime  @updatedAt
+  createdAt      DateTime         @default(now())
+  updatedAt      DateTime         @updatedAt
+  checkoutSessions CheckoutSession[]
 
   @@index([publishableKey])
+  @@index([status])
+}
+
+model CheckoutSession {
+  id               String        @id @default(cuid())
+  apiKeyId         String
+  apiKey           ApiKey        @relation(fields: [apiKeyId], references: [id])
+  mode             CheckoutMode
+  listingId        String?
+  quote            Json?
+  clientSecretHash String
+  status           SessionStatus @default(active)
+  expiresAt        DateTime
+  refreshCount     Int           @default(0)
+  createdAt        DateTime      @default(now())
+  updatedAt        DateTime      @updatedAt
+
+  @@index([apiKeyId])
   @@index([status])
 }

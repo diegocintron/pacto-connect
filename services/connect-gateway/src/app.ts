@@ -2,6 +2,7 @@ import type { ApiKey } from '@prisma/client';
 import { Hono } from 'hono';
 import { originValidation } from './middleware/origin.js';
 import { adminRoutes } from './routes/admin.js';
+import { sessionRoutes } from './routes/session.js';
 
 type GatewayVariables = {
   apiKey: ApiKey;
@@ -21,6 +22,8 @@ export function createApp(): Hono<{ Variables: GatewayVariables }> {
     }
     return originValidation(c, next);
   });
+
+  app.route('/v1/session', sessionRoutes);
 
   app.all('*', (c) => c.json({ error: 'not found' }, 404));
 
