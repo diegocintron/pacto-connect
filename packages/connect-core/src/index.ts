@@ -4,6 +4,34 @@
  * Framework-agnostic SDK core for Pacto Connect.
  */
 
+import {
+  errorFromResponse,
+  type GatewayErrorBody,
+  PactoError,
+  PactoSessionError,
+} from './errors.js';
+import { PUBLISHABLE_KEY_HEADER } from './http.js';
+import { createApiClient, type PactoApiClient } from './resources.js';
+
+export {
+  PactoApiError,
+  PactoAuthError,
+  PactoError,
+  PactoEscrowError,
+  PactoRateLimitError,
+  PactoSessionError,
+} from './errors.js';
+export type {
+  CreateEscrowParams,
+  CreateQuoteParams,
+  Escrow,
+  EscrowStatus,
+  EscrowStatusResponse,
+  Listing,
+  PactoApiClient,
+  Quote,
+} from './resources.js';
+
 export const VERSION = '0.0.0';
 
 export type CheckoutMode = 'buy' | 'sell';
@@ -15,6 +43,10 @@ export interface PactoInitOptions {
   gatewayUrl?: string;
   /** Origin header for non-browser environments. */
   origin?: string;
+  /** Maximum retry attempts for transient failures. */
+  maxRetries?: number;
+  /** Base delay in milliseconds for exponential backoff. */
+  baseDelayMs?: number;
 }
 
 export type CreateCheckoutSessionParams =
@@ -32,32 +64,7 @@ export interface PactoClient {
   readonly publishableKey: string;
   readonly gatewayUrl: string;
   createCheckoutSession(params: CreateCheckoutSessionParams): Promise<PactoSession>;
-}
-
-export class PactoError extends Error {
-  constructor(
-    public readonly type: string,
-    public readonly code: string,
-    message: string,
-  ) {
-    super(message);
-    this.name = 'PactoError';
-  }
-}
-
-export class PactoSessionError extends PactoError {
-  constructor(code: 'session_invalid' | 'session_expired', message: string) {
-    super('session_error', code, message);
-    this.name = 'PactoSessionError';
-  }
-}
-
-interface GatewayErrorResponse {
-  error?: {
-    type?: string;
-    code?: string;
-    message?: string;
-  };
+  api(session: PactoSession): PactoApiClient;
 }
 
 interface GatewaySessionResponse {
@@ -68,22 +75,9 @@ interface GatewaySessionResponse {
 }
 
 const DEFAULT_GATEWAY_URL = 'https://connect.pacto.example';
-const PUBLISHABLE_KEY_HEADER = 'x-pacto-publishable-key';
 
 function isCheckoutMode(value: string): value is CheckoutMode {
   return value === 'buy' || value === 'sell';
-}
-
-function parseGatewayError(body: GatewayErrorResponse, status: number): PactoError {
-  const code = body.error?.code ?? 'unknown_error';
-  const type = body.error?.type ?? 'gateway_error';
-  const message = body.error?.message ?? `Gateway request failed with status ${status}`;
-
-  if (type === 'session_error' && (code === 'session_invalid' || code === 'session_expired')) {
-    return new PactoSessionError(code, message);
-  }
-
-  return new PactoError(type, code, message);
 }
 
 export class PactoSession {
@@ -120,6 +114,8 @@ function createGatewayClient(options: PactoInitOptions): InternalPactoClient {
   const publishableKey = options.publishableKey;
   const gatewayUrl = options.gatewayUrl ?? DEFAULT_GATEWAY_URL;
   const origin = options.origin;
+  const maxRetries = options.maxRetries;
+  const baseDelayMs = options.baseDelayMs;
 
   async function requestSession(
     path: string,
@@ -140,10 +136,10 @@ function createGatewayClient(options: PactoInitOptions): InternalPactoClient {
       body: JSON.stringify(body),
     });
 
-    const responseBody = (await response.json()) as GatewaySessionResponse & GatewayErrorResponse;
+    const responseBody = (await response.json()) as GatewaySessionResponse & GatewayErrorBody;
 
     if (!response.ok) {
-      throw parseGatewayError(responseBody, response.status);
+      throw errorFromResponse(response.status, responseBody, { path });
     }
 
     if (
@@ -176,6 +172,16 @@ function createGatewayClient(options: PactoInitOptions): InternalPactoClient {
     },
     async refreshSession(clientSecret: string): Promise<PactoSessionData> {
       return requestSession('/v1/session/refresh', { clientSecret });
+    },
+    api(session: PactoSession): PactoApiClient {
+      return createApiClient({
+        gatewayUrl,
+        publishableKey,
+        clientSecret: session.clientSecret,
+        origin,
+        maxRetries,
+        baseDelayMs,
+      });
     },
   };
 }
