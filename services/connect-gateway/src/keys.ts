@@ -8,6 +8,7 @@ export interface CreateKeyInput {
   mode: KeyMode;
   allowedOrigins: string[];
   label?: string;
+  quoteSpreadBps?: number;
 }
 
 export interface KeyPair {
@@ -23,6 +24,7 @@ export interface ApiKeyPublic {
   allowedOrigins: string[];
   status: ApiKey['status'];
   label: string | null;
+  quoteSpreadBps: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -62,6 +64,7 @@ function toPublic(record: ApiKey): ApiKeyPublic {
     allowedOrigins: record.allowedOrigins,
     status: record.status,
     label: record.label,
+    quoteSpreadBps: record.quoteSpreadBps,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -82,6 +85,7 @@ export async function createApiKey(input: CreateKeyInput): Promise<ApiKeyCreated
       mode: input.mode,
       allowedOrigins: input.allowedOrigins,
       label: input.label,
+      quoteSpreadBps: input.quoteSpreadBps ?? 0,
     },
   });
 
