@@ -15,15 +15,25 @@ export {
   registerPactoCheckoutElement,
 } from './element.js';
 export { createFocusTrap, type FocusTrap } from './focus-trap.js';
+export { type FrameHandle, type FrameMountOptions, mountFrame } from './frame.js';
+export {
+  type BootstrapCheckoutFrameOptions,
+  bootstrapCheckoutFrame,
+  type FramePageHandle,
+} from './frame-page.js';
 export { type MountHandle, mount, resolveTarget } from './mount.js';
 export { injectCheckoutStyles, STYLE_ELEMENT_ID } from './styles.js';
 export { CheckoutView } from './ui.js';
 
 import { registerPactoCheckoutElement } from './element.js';
+import { mountFrame } from './frame.js';
+import { bootstrapCheckoutFrame } from './frame-page.js';
 import { mount } from './mount.js';
 
 export const pacto = {
   mount,
+  mountFrame,
+  bootstrapCheckoutFrame,
   VERSION,
 };
 
