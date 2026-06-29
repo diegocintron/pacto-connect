@@ -2,10 +2,12 @@ import type { KeyMode } from '@prisma/client';
 import { Hono } from 'hono';
 import { createApiKey, listApiKeys, revokeApiKey, rotateApiKey } from '../keys.js';
 import { adminAuth } from '../middleware/admin.js';
+import { webhookRoutes } from './webhooks.js';
 
 const admin = new Hono();
 
 admin.use('*', adminAuth);
+admin.route('/webhooks', webhookRoutes);
 
 admin.get('/keys', async (c) => {
   const keys = await listApiKeys();
