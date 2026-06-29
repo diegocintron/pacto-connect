@@ -1,14 +1,14 @@
-import type { ReactElement } from 'react'
-import { useCallback, useEffect, useRef, useState } from 'react'
-import styles from './Playground.module.css'
+import type { ReactElement } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import styles from './Playground.module.css';
 
 interface PlaygroundConfig {
-  publishableKey: string
-  mode: 'buy' | 'sell'
-  listingId: string
-  gatewayUrl: string
-  testMode: boolean
-  injectStyles: boolean
+  publishableKey: string;
+  mode: 'buy' | 'sell';
+  listingId: string;
+  gatewayUrl: string;
+  testMode: boolean;
+  injectStyles: boolean;
 }
 
 const DEFAULT_CONFIG: PlaygroundConfig = {
@@ -18,34 +18,39 @@ const DEFAULT_CONFIG: PlaygroundConfig = {
   gatewayUrl: '',
   testMode: true,
   injectStyles: true,
-}
+};
 
-type SnippetLang = 'react' | 'vanilla' | 'cdn'
+type SnippetLang = 'react' | 'vanilla' | 'cdn';
 
 function generateReactSnippet(cfg: PlaygroundConfig): string {
-  const lines: string[] = [`import { PactoCheckout } from '@pacto-connect/react'`, ``, `export default function App() {`, `  return (`]
-  const props: string[] = [`    publishableKey="${cfg.publishableKey}"`, `    mode="${cfg.mode}"`]
-  if (cfg.listingId) props.push(`    listingId="${cfg.listingId}"`)
-  if (cfg.gatewayUrl) props.push(`    gatewayUrl="${cfg.gatewayUrl}"`)
-  if (cfg.testMode) props.push(`    testMode`)
-  props.push(`    onComplete={(escrow) => console.log('Checkout complete', escrow.id)}`)
-  props.push(`    onClose={() => { /* hide the widget */ }}`)
-  lines.push(`    <PactoCheckout`)
-  lines.push(...props)
-  lines.push(`    />`, `  )`, `}`)
-  return lines.join('\n')
+  const lines: string[] = [
+    `import { PactoCheckout } from '@pacto-connect/react'`,
+    ``,
+    `export default function App() {`,
+    `  return (`,
+  ];
+  const props: string[] = [`    publishableKey="${cfg.publishableKey}"`, `    mode="${cfg.mode}"`];
+  if (cfg.listingId) props.push(`    listingId="${cfg.listingId}"`);
+  if (cfg.gatewayUrl) props.push(`    gatewayUrl="${cfg.gatewayUrl}"`);
+  if (cfg.testMode) props.push(`    testMode`);
+  props.push(`    onComplete={(escrow) => console.log('Checkout complete', escrow.id)}`);
+  props.push(`    onClose={() => { /* hide the widget */ }}`);
+  lines.push(`    <PactoCheckout`);
+  lines.push(...props);
+  lines.push(`    />`, `  )`, `}`);
+  return lines.join('\n');
 }
 
 function generateVanillaSnippet(cfg: PlaygroundConfig): string {
-  const opts: string[] = [`  publishableKey: '${cfg.publishableKey}'`, `  mode: '${cfg.mode}'`]
-  if (cfg.listingId) opts.push(`  listingId: '${cfg.listingId}'`)
-  if (cfg.gatewayUrl) opts.push(`  gatewayUrl: '${cfg.gatewayUrl}'`)
-  if (cfg.testMode) opts.push(`  testMode: true`)
-  opts.push(`  onComplete: (escrow) => {`)
-  opts.push(`    console.log('Checkout complete', escrow.id)`)
-  opts.push(`    handle.destroy()`)
-  opts.push(`  },`)
-  opts.push(`  onClose: () => handle.destroy(),`)
+  const opts: string[] = [`  publishableKey: '${cfg.publishableKey}'`, `  mode: '${cfg.mode}'`];
+  if (cfg.listingId) opts.push(`  listingId: '${cfg.listingId}'`);
+  if (cfg.gatewayUrl) opts.push(`  gatewayUrl: '${cfg.gatewayUrl}'`);
+  if (cfg.testMode) opts.push(`  testMode: true`);
+  opts.push(`  onComplete: (escrow) => {`);
+  opts.push(`    console.log('Checkout complete', escrow.id)`);
+  opts.push(`    handle.destroy()`);
+  opts.push(`  },`);
+  opts.push(`  onClose: () => handle.destroy(),`);
 
   return [
     `import { pacto } from '@pacto-connect/elements'`,
@@ -54,13 +59,13 @@ function generateVanillaSnippet(cfg: PlaygroundConfig): string {
     `const handle = pacto.mount('#checkout-root', {`,
     ...opts,
     `})`,
-  ].join('\n')
+  ].join('\n');
 }
 
 function generateCdnSnippet(cfg: PlaygroundConfig): string {
-  const attrs: string[] = [`  publishable-key="${cfg.publishableKey}"`, `  mode="${cfg.mode}"`]
-  if (cfg.listingId) attrs.push(`  listing-id="${cfg.listingId}"`)
-  if (cfg.testMode) attrs.push(`  test-mode`)
+  const attrs: string[] = [`  publishable-key="${cfg.publishableKey}"`, `  mode="${cfg.mode}"`];
+  if (cfg.listingId) attrs.push(`  listing-id="${cfg.listingId}"`);
+  if (cfg.testMode) attrs.push(`  test-mode`);
 
   return [
     `<!-- 1. Load the CDN bundle -->`,
@@ -85,45 +90,45 @@ function generateCdnSnippet(cfg: PlaygroundConfig): string {
     `</script>`,
   ]
     .filter((l) => l !== null)
-    .join('\n')
+    .join('\n');
 }
 
 type MountHandle = {
-  open(): void
-  close(): void
-  destroy(): void
-}
+  open(): void;
+  close(): void;
+  destroy(): void;
+};
 
 export function Playground(): ReactElement {
-  const [cfg, setCfg] = useState<PlaygroundConfig>(DEFAULT_CONFIG)
-  const [lang, setLang] = useState<SnippetLang>('react')
-  const [copied, setCopied] = useState(false)
-  const [widgetOpen, setWidgetOpen] = useState(false)
-  const [mountError, setMountError] = useState<string | null>(null)
-  const previewRef = useRef<HTMLDivElement>(null)
-  const handleRef = useRef<MountHandle | null>(null)
+  const [cfg, setCfg] = useState<PlaygroundConfig>(DEFAULT_CONFIG);
+  const [lang, setLang] = useState<SnippetLang>('react');
+  const [copied, setCopied] = useState(false);
+  const [widgetOpen, setWidgetOpen] = useState(false);
+  const [mountError, setMountError] = useState<string | null>(null);
+  const previewRef = useRef<HTMLDivElement>(null);
+  const handleRef = useRef<MountHandle | null>(null);
 
   const snippet =
     lang === 'react'
       ? generateReactSnippet(cfg)
       : lang === 'vanilla'
         ? generateVanillaSnippet(cfg)
-        : generateCdnSnippet(cfg)
+        : generateCdnSnippet(cfg);
 
   const copy = useCallback(() => {
     void navigator.clipboard.writeText(snippet).then(() => {
-      setCopied(true)
-      setTimeout(() => setCopied(false), 2000)
-    })
-  }, [snippet])
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  }, [snippet]);
 
   const openWidget = useCallback(async () => {
-    if (!previewRef.current) return
-    setMountError(null)
+    if (!previewRef.current) return;
+    setMountError(null);
     try {
       // Dynamic import keeps elements out of the SSR bundle
-      const { pacto } = await import('@pacto-connect/elements')
-      handleRef.current?.destroy()
+      const { pacto } = await import('@pacto-connect/elements');
+      handleRef.current?.destroy();
       handleRef.current = pacto.mount(previewRef.current, {
         publishableKey: cfg.publishableKey,
         mode: cfg.mode,
@@ -132,41 +137,41 @@ export function Playground(): ReactElement {
         testMode: cfg.testMode,
         injectStyles: cfg.injectStyles,
         onComplete: () => {
-          setWidgetOpen(false)
-          handleRef.current = null
+          setWidgetOpen(false);
+          handleRef.current = null;
         },
         onClose: () => {
-          setWidgetOpen(false)
-          handleRef.current = null
+          setWidgetOpen(false);
+          handleRef.current = null;
         },
         onError: (err: Error) => {
-          setMountError(err.message)
-          setWidgetOpen(false)
+          setMountError(err.message);
+          setWidgetOpen(false);
         },
-      })
-      setWidgetOpen(true)
+      });
+      setWidgetOpen(true);
     } catch (err) {
-      setMountError(err instanceof Error ? err.message : 'Failed to load widget')
+      setMountError(err instanceof Error ? err.message : 'Failed to load widget');
     }
-  }, [cfg])
+  }, [cfg]);
 
   const closeWidget = useCallback(() => {
-    handleRef.current?.close()
-    setWidgetOpen(false)
-  }, [])
+    handleRef.current?.close();
+    setWidgetOpen(false);
+  }, []);
 
   // Destroy on unmount
   useEffect(() => {
     return () => {
-      handleRef.current?.destroy()
-    }
-  }, [])
+      handleRef.current?.destroy();
+    };
+  }, []);
 
   const update = <K extends keyof PlaygroundConfig>(key: K, value: PlaygroundConfig[K]) => {
-    setCfg((prev) => ({ ...prev, [key]: value }))
-  }
+    setCfg((prev) => ({ ...prev, [key]: value }));
+  };
 
-  const isPkTest = cfg.publishableKey.startsWith('pk_test_')
+  const isPkTest = cfg.publishableKey.startsWith('pk_test_');
 
   return (
     <div className={styles.root}>
@@ -270,9 +275,7 @@ export function Playground(): ReactElement {
             </button>
           )}
           {!isPkTest && cfg.publishableKey && (
-            <p className={styles.hint}>
-              Using a live key — real funds may be involved.
-            </p>
+            <p className={styles.hint}>Using a live key — real funds may be involved.</p>
           )}
           {mountError && <p className={styles.error}>{mountError}</p>}
         </div>
@@ -286,7 +289,9 @@ export function Playground(): ReactElement {
           {!widgetOpen && (
             <div className={styles.previewPlaceholder}>
               <div className={styles.previewIcon}>⬡</div>
-              <p>Click <strong>Open widget</strong> to launch a live preview</p>
+              <p>
+                Click <strong>Open widget</strong> to launch a live preview
+              </p>
               <p className={styles.hint}>
                 The widget mounts directly into this frame using <code>pacto.mount()</code>.
               </p>
@@ -316,5 +321,5 @@ export function Playground(): ReactElement {
         </div>
       </div>
     </div>
-  )
+  );
 }

@@ -1,5 +1,5 @@
-import type { DocsThemeConfig } from 'nextra-theme-docs'
-import { useRouter } from 'next/router'
+import { useRouter } from 'next/router';
+import type { DocsThemeConfig } from 'nextra-theme-docs';
 
 const config: DocsThemeConfig = {
   logo: (
@@ -15,11 +15,11 @@ const config: DocsThemeConfig = {
     text: '© 2024 Pacto. All rights reserved.',
   },
   useNextSeoProps() {
-    const { asPath } = useRouter()
+    const { asPath } = useRouter();
     if (asPath === '/') {
-      return { titleTemplate: 'Pacto Connect Docs' }
+      return { titleTemplate: 'Pacto Connect Docs' };
     }
-    return { titleTemplate: '%s – Pacto Connect' }
+    return { titleTemplate: '%s – Pacto Connect' };
   },
   head: (
     <>
@@ -33,6 +33,6 @@ const config: DocsThemeConfig = {
     defaultMenuCollapseLevel: 1,
     toggleButton: true,
   },
-}
+};
 
-export default config
+export default config;
