@@ -30,6 +30,18 @@ enum SessionStatus {
   revoked
 }
 
+enum WebhookStatus {
+  enabled
+  disabled
+}
+
+enum WebhookDeliveryStatus {
+  pending
+  succeeded
+  failed
+  dead
+}
+
 model ApiKey {
   id             String           @id @default(cuid())
   publishableKey String           @unique
@@ -41,7 +53,9 @@ model ApiKey {
   label          String?
   createdAt      DateTime         @default(now())
   updatedAt      DateTime         @updatedAt
-  checkoutSessions CheckoutSession[]
+  checkoutSessions   CheckoutSession[]
+  webhookEndpoints   WebhookEndpoint[]
+  webhookEvents      WebhookEvent[]
 
   @@index([publishableKey])
   @@index([status])
@@ -63,4 +77,57 @@ model CheckoutSession {
 
   @@index([apiKeyId])
   @@index([status])
+}
+
+model WebhookEndpoint {
+  id            String                @id @default(cuid())
+  apiKeyId      String
+  apiKey        ApiKey                @relation(fields: [apiKeyId], references: [id])
+  url           String
+  secret        String
+  enabledEvents String[]
+  status        WebhookStatus         @default(enabled)
+  verified      Boolean               @default(false)
+  description   String?
+  createdAt     DateTime              @default(now())
+  updatedAt     DateTime              @updatedAt
+  deliveries    WebhookDelivery[]
+
+  @@index([apiKeyId])
+  @@index([status])
+}
+
+model WebhookEvent {
+  id         String            @id @default(cuid())
+  apiKeyId   String
+  apiKey     ApiKey            @relation(fields: [apiKeyId], references: [id])
+  type       String
+  data       Json
+  createdAt  DateTime          @default(now())
+  deliveries WebhookDelivery[]
+
+  @@index([apiKeyId])
+  @@index([type])
+}
+
+model WebhookDelivery {
+  id             String                @id @default(cuid())
+  endpointId     String
+  endpoint       WebhookEndpoint       @relation(fields: [endpointId], references: [id])
+  eventId        String
+  event          WebhookEvent          @relation(fields: [eventId], references: [id])
+  eventType      String
+  status         WebhookDeliveryStatus @default(pending)
+  attempts       Int                   @default(0)
+  maxAttempts    Int                   @default(5)
+  nextAttemptAt  DateTime              @default(now())
+  lastError      String?
+  lastStatusCode Int?
+  deliveredAt    DateTime?
+  createdAt      DateTime              @default(now())
+  updatedAt      DateTime              @updatedAt
+
+  @@index([status, nextAttemptAt])
+  @@index([endpointId])
+  @@index([eventId])
 }
