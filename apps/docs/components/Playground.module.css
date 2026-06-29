@@ -1,0 +1,338 @@
+.root {
+  display: grid;
+  grid-template-columns: 300px 1fr;
+  gap: 1.5rem;
+  min-height: calc(100vh - 4rem);
+  padding: 1.5rem;
+  box-sizing: border-box;
+  align-items: start;
+}
+
+@media (max-width: 768px) {
+  .root {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Config panel ───────────────────────────────────────────────── */
+
+.panel {
+  background: var(--nextra-bg, #fff);
+  border: 1px solid var(--nextra-border, #e5e7eb);
+  border-radius: 8px;
+  padding: 1.25rem;
+  position: sticky;
+  top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+:global(.dark) .panel {
+  background: #111;
+  border-color: #333;
+}
+
+.panelTitle {
+  font-size: 0.875rem;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--nextra-gray, #6b7280);
+  margin: 0 0 0.25rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.375rem;
+  cursor: text;
+}
+
+.label {
+  font-size: 0.8125rem;
+  font-weight: 500;
+  color: inherit;
+}
+
+.optional {
+  font-weight: 400;
+  color: var(--nextra-gray, #6b7280);
+}
+
+.input,
+.select {
+  font-family: 'Fira Mono', 'Cascadia Code', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  padding: 0.375rem 0.5rem;
+  border: 1px solid var(--nextra-border, #e5e7eb);
+  border-radius: 6px;
+  background: var(--nextra-bg, #fff);
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.15s;
+}
+
+:global(.dark) .input,
+:global(.dark) .select {
+  background: #1a1a1a;
+  border-color: #444;
+}
+
+.input:focus,
+.select:focus {
+  outline: none;
+  border-color: #6366f1;
+  box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.2);
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: var(--nextra-gray, #6b7280);
+  margin: 0;
+}
+
+.warn {
+  color: #d97706;
+}
+
+.error {
+  font-size: 0.75rem;
+  color: #ef4444;
+  margin: 0;
+  padding: 0.375rem 0.5rem;
+  background: rgba(239, 68, 68, 0.08);
+  border-radius: 4px;
+}
+
+/* ── Toggle ─────────────────────────────────────────────────────── */
+
+.toggleRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.toggle {
+  position: relative;
+  width: 36px;
+  height: 20px;
+  border-radius: 999px;
+  background: #d1d5db;
+  border: none;
+  cursor: pointer;
+  padding: 0;
+  transition: background 0.15s;
+  flex-shrink: 0;
+}
+
+.toggleOn {
+  background: #6366f1;
+}
+
+.toggleThumb {
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: #fff;
+  transition: transform 0.15s;
+  pointer-events: none;
+}
+
+.toggleOn .toggleThumb {
+  transform: translateX(16px);
+}
+
+/* ── Buttons ────────────────────────────────────────────────────── */
+
+.previewActions {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.25rem;
+}
+
+.btnPrimary {
+  padding: 0.5rem 1rem;
+  background: #6366f1;
+  color: #fff;
+  border: none;
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s, opacity 0.15s;
+  width: 100%;
+}
+
+.btnPrimary:hover:not(:disabled) {
+  background: #4f46e5;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.btnSecondary {
+  padding: 0.5rem 1rem;
+  background: transparent;
+  color: inherit;
+  border: 1px solid var(--nextra-border, #e5e7eb);
+  border-radius: 6px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: background 0.15s;
+  width: 100%;
+}
+
+.btnSecondary:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+/* ── Right column ───────────────────────────────────────────────── */
+
+.right {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  min-width: 0;
+}
+
+/* ── Preview area ───────────────────────────────────────────────── */
+
+.previewArea {
+  position: relative;
+  border: 1px solid var(--nextra-border, #e5e7eb);
+  border-radius: 8px;
+  min-height: 280px;
+  overflow: hidden;
+  background: repeating-linear-gradient(
+    45deg,
+    transparent,
+    transparent 12px,
+    rgba(99, 102, 241, 0.03) 12px,
+    rgba(99, 102, 241, 0.03) 24px
+  );
+}
+
+:global(.dark) .previewArea {
+  border-color: #333;
+}
+
+.previewMount {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+}
+
+.previewPlaceholder {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  color: var(--nextra-gray, #6b7280);
+  text-align: center;
+  padding: 2rem;
+}
+
+.previewIcon {
+  font-size: 2.5rem;
+  opacity: 0.4;
+  margin-bottom: 0.25rem;
+}
+
+.previewPlaceholder p {
+  margin: 0;
+  font-size: 0.875rem;
+}
+
+/* ── Snippet panel ──────────────────────────────────────────────── */
+
+.snippet {
+  border: 1px solid var(--nextra-border, #e5e7eb);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+:global(.dark) .snippet {
+  border-color: #333;
+}
+
+.snippetTabs {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  background: var(--nextra-bg, #f9fafb);
+  border-bottom: 1px solid var(--nextra-border, #e5e7eb);
+  padding: 0 0.75rem;
+}
+
+:global(.dark) .snippetTabs {
+  background: #1a1a1a;
+  border-color: #333;
+}
+
+.snippetTab {
+  padding: 0.625rem 0.875rem;
+  font-size: 0.8125rem;
+  font-weight: 500;
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  color: var(--nextra-gray, #6b7280);
+  transition: color 0.15s, border-color 0.15s;
+  white-space: nowrap;
+}
+
+.snippetTab:hover {
+  color: inherit;
+}
+
+.snippetTabActive {
+  color: #6366f1;
+  border-bottom-color: #6366f1;
+}
+
+.copyBtn {
+  margin-left: auto;
+  padding: 0.375rem 0.75rem;
+  font-size: 0.75rem;
+  font-weight: 500;
+  background: none;
+  border: 1px solid var(--nextra-border, #e5e7eb);
+  border-radius: 4px;
+  cursor: pointer;
+  color: inherit;
+  transition: background 0.15s;
+  white-space: nowrap;
+}
+
+.copyBtn:hover {
+  background: rgba(99, 102, 241, 0.08);
+}
+
+.code {
+  margin: 0;
+  padding: 1.25rem;
+  font-family: 'Fira Mono', 'Cascadia Code', ui-monospace, monospace;
+  font-size: 0.8125rem;
+  line-height: 1.6;
+  overflow-x: auto;
+  background: var(--nextra-bg, #fff);
+  color: inherit;
+  white-space: pre;
+}
+
+:global(.dark) .code {
+  background: #111;
+}
