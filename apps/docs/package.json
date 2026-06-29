@@ -2,12 +2,33 @@
   "name": "@pacto-connect/docs",
   "version": "0.0.0",
   "private": true,
-  "description": "Docs site + interactive playground (implemented in issue #10).",
+  "description": "Developer docs, quickstart, API reference, and interactive playground for Pacto Connect.",
   "scripts": {
-    "build": "echo 'docs site is implemented in issue #10' && exit 0",
-    "dev": "echo 'docs site is implemented in issue #10' && exit 0",
-    "lint": "echo 'noop'",
-    "type-check": "echo 'noop'",
-    "clean": "echo 'noop'"
+    "dev": "next dev --port 3100",
+    "build": "npm run generate:api-docs && next build",
+    "start": "next start --port 3100",
+    "lint": "next lint",
+    "type-check": "tsc --noEmit",
+    "clean": "rm -rf .next out",
+    "generate:api-docs": "node --import tsx/esm scripts/generate-api-docs.mts"
+  },
+  "dependencies": {
+    "@pacto-connect/core": "*",
+    "@pacto-connect/elements": "*",
+    "@pacto-connect/react": "*",
+    "next": "^14.2.18",
+    "nextra": "^2.13.4",
+    "nextra-theme-docs": "^2.13.4",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1"
+  },
+  "devDependencies": {
+    "@types/node": "^20.0.0",
+    "@types/react": "^18.3.0",
+    "@types/react-dom": "^18.3.0",
+    "tsx": "^4.19.2",
+    "typedoc": "^0.28.0",
+    "typedoc-plugin-markdown": "^4.12.0",
+    "typescript": "^5.6.3"
   }
 }
