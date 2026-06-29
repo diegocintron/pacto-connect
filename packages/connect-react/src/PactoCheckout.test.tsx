@@ -135,6 +135,10 @@ function createFetchMock(sse?: ReturnType<typeof createDeferredSseResponse>) {
       return jsonResponse({ escrow: { ...escrow, status: 'active' } });
     }
 
+    if (url.includes('/v1/test/escrows/')) {
+      return jsonResponse({ escrow: { ...escrow, status: 'released' } });
+    }
+
     if (url.includes('/v1/escrows/events')) {
       if (sse) {
         return sse.response();
@@ -309,7 +313,7 @@ describe('PactoCheckout', () => {
     it('renders dialog with ARIA attributes', async () => {
       render(
         <PactoCheckout
-          publishableKey={publishableKey}
+          publishableKey="pk_live_123"
           gatewayUrl={gatewayUrl}
           listingId={listingId}
           open
@@ -329,7 +333,7 @@ describe('PactoCheckout', () => {
 
       render(
         <PactoCheckout
-          publishableKey={publishableKey}
+          publishableKey="pk_live_123"
           gatewayUrl={gatewayUrl}
           listingId={listingId}
           open
@@ -346,7 +350,7 @@ describe('PactoCheckout', () => {
     it('traps focus within the dialog on Tab', async () => {
       render(
         <PactoCheckout
-          publishableKey={publishableKey}
+          publishableKey="pk_live_123"
           gatewayUrl={gatewayUrl}
           listingId={listingId}
           open
@@ -366,6 +370,93 @@ describe('PactoCheckout', () => {
       await userEvent.tab();
       expect(closeButton).toHaveFocus();
       expect(dialog.contains(document.activeElement)).toBe(true);
+    });
+  });
+
+  describe('test mode', () => {
+    it('shows TEST MODE banner for pk_test_ keys', async () => {
+      render(
+        <PactoCheckout
+          publishableKey={publishableKey}
+          gatewayUrl={gatewayUrl}
+          listingId={listingId}
+          open
+          onClose={() => {}}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('checkout-test-banner')).toBeInTheDocument();
+      });
+
+      expect(screen.getByTestId('checkout-test-banner')).toHaveTextContent(
+        'TEST MODE — no real funds or Stellar transactions',
+      );
+    });
+
+    it('does not show TEST MODE banner for pk_live_ keys', async () => {
+      render(
+        <PactoCheckout
+          publishableKey="pk_live_123"
+          gatewayUrl={gatewayUrl}
+          listingId={listingId}
+          open
+          onClose={() => {}}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('deposit-step')).toBeInTheDocument();
+      });
+
+      expect(screen.queryByTestId('checkout-test-banner')).not.toBeInTheDocument();
+    });
+
+    it('invokes api.test controls when simulator buttons are clicked', async () => {
+      const fetchMock = createFetchMock();
+      vi.stubGlobal('fetch', fetchMock);
+      const user = userEvent.setup();
+
+      render(
+        <PactoCheckout
+          publishableKey={publishableKey}
+          gatewayUrl={gatewayUrl}
+          listingId={listingId}
+          open
+          onClose={() => {}}
+        />,
+      );
+
+      await waitFor(() => {
+        expect(screen.getByTestId('checkout-simulator-controls')).toBeInTheDocument();
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Force release' }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/v1/test/escrows/esc_1/release'),
+          expect.objectContaining({ method: 'POST' }),
+        );
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Force dispute' }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/v1/test/escrows/esc_1/dispute'),
+          expect.objectContaining({ method: 'POST' }),
+        );
+      });
+
+      await user.click(screen.getByRole('button', { name: 'Force timeout' }));
+
+      await waitFor(() => {
+        expect(fetchMock).toHaveBeenCalledWith(
+          expect.stringContaining('/v1/test/escrows/esc_1/timeout'),
+          expect.objectContaining({ method: 'POST' }),
+        );
+      });
     });
   });
 });

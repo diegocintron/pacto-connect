@@ -119,6 +119,10 @@ function createFetchMock(sse?: ReturnType<typeof createDeferredSseResponse>) {
       return jsonResponse({ escrow: { ...escrow, status: 'active' } });
     }
 
+    if (url.includes('/v1/test/escrows/')) {
+      return jsonResponse({ escrow: { ...escrow, status: 'released' } });
+    }
+
     if (url.includes('/v1/escrows/events')) {
       if (sse) {
         return sse.response();
@@ -168,6 +172,11 @@ describe('@pacto-connect/elements', () => {
     await waitFor(() => {
       expect(document.querySelector('[data-testid="deposit-step"]')).toBeTruthy();
     });
+
+    expect(document.querySelector('[data-testid="checkout-test-banner"]')).toBeTruthy();
+    expect(document.querySelector('[data-testid="checkout-test-banner"]')?.textContent).toContain(
+      'TEST MODE',
+    );
 
     expect(postMessage).toHaveBeenCalledWith(
       expect.objectContaining({

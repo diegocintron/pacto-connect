@@ -27,6 +27,16 @@ function stepLabel(step: CheckoutStep): string {
   }
 }
 
+const SIMULATOR_STEPS: CheckoutStep[] = ['deposit', 'uploadReceipt', 'tracking'];
+
+function showSimulatorControls(
+  testMode: boolean,
+  step: CheckoutStep,
+  escrow: import('@pacto-connect/core').Escrow | null,
+): boolean {
+  return testMode && escrow !== null && SIMULATOR_STEPS.includes(step);
+}
+
 function milestoneLabel(type: EscrowEvent['type']): string {
   switch (type) {
     case 'escrow.funded':
@@ -87,6 +97,10 @@ export class CheckoutView {
     header.append(title, closeButton);
     dialog.append(header);
 
+    if (state.testMode) {
+      dialog.prepend(this.createTestBanner());
+    }
+
     switch (state.step) {
       case 'loading':
         dialog.append(this.createLoading());
@@ -116,6 +130,10 @@ export class CheckoutView {
         break;
     }
 
+    if (showSimulatorControls(state.testMode, state.step, state.escrow)) {
+      dialog.append(this.createSimulatorControls());
+    }
+
     this.container.append(dialog);
 
     // Trap focus on the persistent overlay container (the inner dialog node is
@@ -131,6 +149,50 @@ export class CheckoutView {
   destroy(): void {
     this.focusTrap?.release();
     this.focusTrap = null;
+  }
+
+  private createTestBanner(): HTMLElement {
+    const banner = document.createElement('div');
+    banner.className = 'pacto-checkout-test-banner';
+    banner.role = 'status';
+    banner.dataset.testid = 'checkout-test-banner';
+    banner.textContent = 'TEST MODE — no real funds or Stellar transactions';
+    return banner;
+  }
+
+  private createSimulatorControls(): HTMLElement {
+    const wrapper = document.createElement('div');
+    wrapper.className = 'pacto-checkout-simulator-controls';
+    wrapper.role = 'group';
+    wrapper.setAttribute('aria-label', 'Simulator controls');
+    wrapper.dataset.testid = 'checkout-simulator-controls';
+
+    const label = document.createElement('p');
+    label.textContent = 'Simulator controls';
+
+    const releaseButton = document.createElement('button');
+    releaseButton.type = 'button';
+    releaseButton.textContent = 'Force release';
+    releaseButton.addEventListener('click', () => {
+      void this.controller.forceTestRelease();
+    });
+
+    const disputeButton = document.createElement('button');
+    disputeButton.type = 'button';
+    disputeButton.textContent = 'Force dispute';
+    disputeButton.addEventListener('click', () => {
+      void this.controller.forceTestDispute();
+    });
+
+    const timeoutButton = document.createElement('button');
+    timeoutButton.type = 'button';
+    timeoutButton.textContent = 'Force timeout';
+    timeoutButton.addEventListener('click', () => {
+      void this.controller.forceTestTimeout();
+    });
+
+    wrapper.append(label, releaseButton, disputeButton, timeoutButton);
+    return wrapper;
   }
 
   private createLoading(): HTMLElement {

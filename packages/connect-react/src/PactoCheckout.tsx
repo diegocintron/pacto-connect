@@ -37,6 +37,16 @@ function stepLabel(step: CheckoutStep): string {
   }
 }
 
+const SIMULATOR_STEPS: CheckoutStep[] = ['deposit', 'uploadReceipt', 'tracking'];
+
+function showSimulatorControls(
+  testMode: boolean,
+  step: CheckoutStep,
+  escrow: import('@pacto-connect/core').Escrow | null,
+): boolean {
+  return testMode && escrow !== null && SIMULATOR_STEPS.includes(step);
+}
+
 function milestoneLabel(type: EscrowEvent['type']): string {
   switch (type) {
     case 'escrow.funded':
@@ -86,6 +96,16 @@ export function PactoCheckout(props: PactoCheckoutProps) {
         data-testid="pacto-checkout-dialog"
         tabIndex={-1}
       >
+        {flow.testMode && (
+          <div
+            className="pacto-checkout-test-banner"
+            role="status"
+            data-testid="checkout-test-banner"
+          >
+            TEST MODE — no real funds or Stellar transactions
+          </div>
+        )}
+
         <header className="pacto-checkout-header">
           <h2 id={titleId}>{stepLabel(flow.step)}</h2>
           <button type="button" onClick={props.onClose} aria-label="Close checkout">
@@ -186,6 +206,26 @@ export function PactoCheckout(props: PactoCheckoutProps) {
           <output aria-live="polite" data-testid="checkout-disputed">
             Escrow {flow.escrow?.id} has been disputed.
           </output>
+        )}
+
+        {showSimulatorControls(flow.testMode, flow.step, flow.escrow) && (
+          <div
+            className="pacto-checkout-simulator-controls"
+            role="group"
+            aria-label="Simulator controls"
+            data-testid="checkout-simulator-controls"
+          >
+            <p>Simulator controls</p>
+            <button type="button" onClick={() => flow.controls.forceRelease()}>
+              Force release
+            </button>
+            <button type="button" onClick={() => flow.controls.forceDispute()}>
+              Force dispute
+            </button>
+            <button type="button" onClick={() => flow.controls.forceTimeout()}>
+              Force timeout
+            </button>
+          </div>
         )}
       </div>
     </div>

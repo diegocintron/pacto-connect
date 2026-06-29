@@ -21,6 +21,12 @@ export interface UseCheckoutFlowOptions {
   onError?: (error: Error) => void;
 }
 
+export interface UseCheckoutFlowControls {
+  forceRelease: () => Promise<void>;
+  forceDispute: (reason?: string) => Promise<void>;
+  forceTimeout: () => Promise<void>;
+}
+
 export interface UseCheckoutFlowResult {
   step: CheckoutStep;
   listings: Listing[];
@@ -29,6 +35,8 @@ export interface UseCheckoutFlowResult {
   quote: import('@pacto-connect/core').Quote | null;
   error: Error | null;
   milestones: import('@pacto-connect/core').EscrowEvent[];
+  testMode: boolean;
+  controls: UseCheckoutFlowControls;
   selectListing: (listing: Listing) => Promise<void>;
   confirmDeposit: () => Promise<void>;
   submitReceipt: (method: 'SINPE' | 'SPEI', reference: string, receipt?: string) => Promise<void>;
@@ -44,6 +52,7 @@ const INITIAL_STATE: CheckoutFlowState = {
   quote: null,
   error: null,
   milestones: [],
+  testMode: false,
 };
 
 export function useCheckoutFlow(options: UseCheckoutFlowOptions): UseCheckoutFlowResult {
@@ -96,6 +105,12 @@ export function useCheckoutFlow(options: UseCheckoutFlowOptions): UseCheckoutFlo
 
   return {
     ...state,
+    controls: {
+      forceRelease: () => controllerRef.current?.forceTestRelease() ?? Promise.resolve(),
+      forceDispute: (reason) =>
+        controllerRef.current?.forceTestDispute(reason) ?? Promise.resolve(),
+      forceTimeout: () => controllerRef.current?.forceTestTimeout() ?? Promise.resolve(),
+    },
     selectListing: (listing) => controllerRef.current?.selectListing(listing) ?? Promise.resolve(),
     confirmDeposit: () => controllerRef.current?.confirmDeposit() ?? Promise.resolve(),
     submitReceipt: (method, reference, receipt) =>

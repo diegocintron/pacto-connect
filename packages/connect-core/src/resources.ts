@@ -83,10 +83,17 @@ export interface EscrowsResource {
   reportFiatPayment(id: string, params: FiatReceiptParams): Promise<{ escrow: Escrow }>;
 }
 
+export interface TestModeResource {
+  forceDispute(escrowId: string, params?: { reason?: string }): Promise<{ escrow: Escrow }>;
+  forceTimeout(escrowId: string): Promise<{ escrow: Escrow }>;
+  forceRelease(escrowId: string): Promise<{ escrow: Escrow }>;
+}
+
 export interface PactoApiClient {
   readonly listings: ListingsResource;
   readonly quotes: QuotesResource;
   readonly escrows: EscrowsResource;
+  readonly test: TestModeResource;
 }
 
 export function createApiClient(options: HttpClientOptions): PactoApiClient {
@@ -151,6 +158,30 @@ export function createApiClient(options: HttpClientOptions): PactoApiClient {
           method: 'POST',
           path: `/v1/escrows/${id}/fiat-receipt`,
           body: params,
+          idempotent: true,
+          resource: 'escrow',
+        }),
+    },
+    test: {
+      forceDispute: (escrowId, params) =>
+        request<{ escrow: Escrow }>(options, {
+          method: 'POST',
+          path: `/v1/test/escrows/${escrowId}/dispute`,
+          body: params?.reason !== undefined ? { reason: params.reason } : undefined,
+          idempotent: true,
+          resource: 'escrow',
+        }),
+      forceTimeout: (escrowId) =>
+        request<{ escrow: Escrow }>(options, {
+          method: 'POST',
+          path: `/v1/test/escrows/${escrowId}/timeout`,
+          idempotent: true,
+          resource: 'escrow',
+        }),
+      forceRelease: (escrowId) =>
+        request<{ escrow: Escrow }>(options, {
+          method: 'POST',
+          path: `/v1/test/escrows/${escrowId}/release`,
           idempotent: true,
           resource: 'escrow',
         }),

@@ -6,6 +6,7 @@ import {
   type PactoSessionData,
 } from './client.js';
 import type { EscrowEvent } from './escrow-events.js';
+import { isTestMode } from './keys.js';
 import type { Escrow, Listing, PactoApiClient, Quote } from './resources.js';
 
 export type CheckoutStep =
@@ -27,6 +28,7 @@ export interface CheckoutFlowState {
   quote: Quote | null;
   error: Error | null;
   milestones: EscrowEvent[];
+  testMode: boolean;
 }
 
 export interface CheckoutFlowOptions {
@@ -52,6 +54,7 @@ const INITIAL_STATE: CheckoutFlowState = {
   quote: null,
   error: null,
   milestones: [],
+  testMode: false,
 };
 
 export class CheckoutFlowController {
@@ -141,6 +144,60 @@ export class CheckoutFlowController {
     void this.initialize();
   }
 
+  async forceTestRelease(): Promise<void> {
+    if (!this.state.testMode) {
+      return;
+    }
+
+    const api = this.api;
+    const currentEscrow = this.escrow;
+    if (!api || !currentEscrow) {
+      return;
+    }
+
+    try {
+      await api.test.forceRelease(currentEscrow.id);
+    } catch (err) {
+      this.handleError(err);
+    }
+  }
+
+  async forceTestDispute(reason?: string): Promise<void> {
+    if (!this.state.testMode) {
+      return;
+    }
+
+    const api = this.api;
+    const currentEscrow = this.escrow;
+    if (!api || !currentEscrow) {
+      return;
+    }
+
+    try {
+      await api.test.forceDispute(currentEscrow.id, reason ? { reason } : undefined);
+    } catch (err) {
+      this.handleError(err);
+    }
+  }
+
+  async forceTestTimeout(): Promise<void> {
+    if (!this.state.testMode) {
+      return;
+    }
+
+    const api = this.api;
+    const currentEscrow = this.escrow;
+    if (!api || !currentEscrow) {
+      return;
+    }
+
+    try {
+      await api.test.forceTimeout(currentEscrow.id);
+    } catch (err) {
+      this.handleError(err);
+    }
+  }
+
   private patchState(partial: Partial<CheckoutFlowState>): void {
     if (this.destroyed) {
       return;
@@ -218,7 +275,10 @@ export class CheckoutFlowController {
   }
 
   private async initialize(): Promise<void> {
-    this.state = { ...INITIAL_STATE };
+    this.state = {
+      ...INITIAL_STATE,
+      testMode: isTestMode(this.options.publishableKey),
+    };
     this.eventsBound = false;
     this.escrow = null;
     this.options.onChange?.(this.state);

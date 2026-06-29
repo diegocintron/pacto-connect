@@ -53,6 +53,7 @@ export {
   type EscrowMilestone,
   type EscrowSubscribeOptions,
 } from './escrow-events.js';
+export { isTestMode, keyMode } from './keys.js';
 export type {
   CreateEscrowParams,
   CreateQuoteParams,

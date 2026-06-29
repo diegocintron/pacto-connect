@@ -99,6 +99,45 @@ const CHECKOUT_STYLES = `
 .pacto-checkout-dialog [data-testid="checkout-error"] {
   color: #b91c1c;
 }
+
+.pacto-checkout-test-banner {
+  margin: -1.5rem -1.5rem 1rem;
+  padding: 0.625rem 1rem;
+  border-radius: 0.75rem 0.75rem 0 0;
+  background: #fef3c7;
+  color: #92400e;
+  border-bottom: 1px solid #fcd34d;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  text-align: center;
+  letter-spacing: 0.02em;
+}
+
+.pacto-checkout-simulator-controls {
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #cbd5e1;
+  display: grid;
+  gap: 0.5rem;
+}
+
+.pacto-checkout-simulator-controls p {
+  margin: 0;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.pacto-checkout-simulator-controls button {
+  background: #f59e0b;
+  border-color: #d97706;
+}
+
+.pacto-checkout-simulator-controls button:hover {
+  background: #d97706;
+}
 `;
 
 /**

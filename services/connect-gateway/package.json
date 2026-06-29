@@ -18,6 +18,7 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@pacto-connect/core": "*",
     "@prisma/client": "^6.19.0",
     "hono": "^4.6.14"
   },

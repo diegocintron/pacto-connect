@@ -201,6 +201,34 @@ describe('CheckoutFlowController', () => {
     controller.destroy();
   });
 
+  it('sets testMode true for pk_test_ publishable keys', async () => {
+    const { CheckoutFlowController } = await import('./checkout-flow');
+    const controller = new CheckoutFlowController({
+      publishableKey: 'pk_test_123',
+      gatewayUrl,
+      listingId,
+    });
+
+    await controller.start();
+
+    expect(controller.getState().testMode).toBe(true);
+    controller.destroy();
+  });
+
+  it('sets testMode false for pk_live_ publishable keys', async () => {
+    const { CheckoutFlowController } = await import('./checkout-flow');
+    const controller = new CheckoutFlowController({
+      publishableKey: 'pk_live_123',
+      gatewayUrl,
+      listingId,
+    });
+
+    await controller.start();
+
+    expect(controller.getState().testMode).toBe(false);
+    controller.destroy();
+  });
+
   it('resumes a pre-created session without calling POST /v1/session', async () => {
     const fetchMock = vi.mocked(fetch);
     const { CheckoutFlowController } = await import('./checkout-flow');
