@@ -47,11 +47,18 @@ vi.mock('../db.js', () => ({
       findUnique: vi.fn(),
       update: vi.fn(),
     },
+    subscription: {
+      findFirst: vi.fn(),
+      update: vi.fn(),
+    },
   },
 }));
 
+vi.mock('../subscriptions/charge.js', () => ({ chargeSubscription: vi.fn() }));
+
 import { prisma } from '../db.js';
 import * as keys from '../keys.js';
+import { chargeSubscription } from '../subscriptions/charge.js';
 
 function testHeaders(apiKey: ApiKey = mockApiKey) {
   return {
@@ -181,5 +188,78 @@ describe('test control routes', () => {
         message: 'test controls require a test-mode key',
       },
     });
+  });
+});
+
+describe('subscription test controls', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date('2024-06-01T12:00:00.000Z'));
+    process.env.GATEWAY_SIGNING_SECRET = 'test-signing-secret';
+    resetSimulator();
+
+    clientSecret = buildClientSecret('session_1', mockApiKey.id, sessionExpiresAt);
+    mockCheckoutSession = {
+      id: 'session_1',
+      apiKeyId: mockApiKey.id,
+      mode: 'buy',
+      listingId: 'listing_1',
+      quote: null,
+      clientSecretHash: hashClientSecret(clientSecret),
+      status: 'active',
+      expiresAt: sessionExpiresAt,
+      refreshCount: 0,
+      createdAt: new Date('2024-06-01T12:00:00.000Z'),
+      updatedAt: new Date('2024-06-01T12:00:00.000Z'),
+    };
+
+    vi.mocked(keys.findActiveApiKeyByPublishableKey).mockReset();
+    vi.mocked(prisma.checkoutSession.findUnique).mockReset();
+    vi.mocked(prisma.subscription.findFirst).mockReset();
+    vi.mocked(prisma.subscription.update).mockReset();
+    vi.mocked(chargeSubscription).mockReset();
+    vi.mocked(keys.findActiveApiKeyByPublishableKey).mockResolvedValue(mockApiKey);
+    vi.mocked(prisma.checkoutSession.findUnique).mockResolvedValue(mockCheckoutSession);
+  });
+
+  it('POST /v1/test/subscriptions/:id/advance charges synchronously', async () => {
+    vi.mocked(prisma.subscription.findFirst).mockResolvedValue({
+      id: 'sub_1',
+      apiKeyId: 'key_1',
+      sessionId: 'session_1',
+    } as never);
+    vi.mocked(chargeSubscription).mockResolvedValue({
+      subscriptionId: 'sub_1',
+      status: 'succeeded',
+      escrowId: 'esc_1',
+      subscriptionStatus: 'active',
+    });
+    const app = createApp();
+    const res = await app.request('/v1/test/subscriptions/sub_1/advance', {
+      method: 'POST',
+      headers: testHeaders(),
+    });
+    expect(res.status).toBe(200);
+    expect(chargeSubscription).toHaveBeenCalledWith('sub_1');
+  });
+
+  it('POST /v1/test/subscriptions/:id/fail-next sets failNextCharge', async () => {
+    vi.mocked(prisma.subscription.findFirst).mockResolvedValue({
+      id: 'sub_1',
+      apiKeyId: 'key_1',
+      sessionId: 'session_1',
+    } as never);
+    vi.mocked(prisma.subscription.update).mockResolvedValue({
+      id: 'sub_1',
+      failNextCharge: true,
+    } as never);
+    const app = createApp();
+    const res = await app.request('/v1/test/subscriptions/sub_1/fail-next', {
+      method: 'POST',
+      headers: testHeaders(),
+    });
+    expect(res.status).toBe(200);
+    const args = vi.mocked(prisma.subscription.update).mock.calls[0]![0];
+    expect(args.data.failNextCharge).toBe(true);
   });
 });
