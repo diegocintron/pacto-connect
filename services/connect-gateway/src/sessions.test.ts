@@ -28,6 +28,7 @@ import type { CheckoutSession } from '@prisma/client';
 import { prisma } from './db.js';
 import {
   buildClientSecret,
+  createCheckoutSession,
   hashClientSecret,
   refreshCheckoutSession,
   validateClientSecret,
@@ -137,5 +138,39 @@ describe('sessions service', () => {
     await expect(validateClientSecret(foreignSecret)).rejects.toEqual(
       expect.objectContaining({ code: 'session_invalid' }),
     );
+  });
+
+  it('createCheckoutSession persists merchantId when provided', async () => {
+    const created = {
+      id: 'sess_m',
+      apiKeyId: 'key_1',
+      merchantId: 'mrc_1',
+      mode: 'buy' as const,
+      listingId: null,
+      quote: null,
+      clientSecretHash: '',
+      status: 'active' as const,
+      expiresAt: new Date('2026-01-01T00:15:00.000Z'),
+      refreshCount: 0,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    };
+    vi.mocked(prisma.checkoutSession.create).mockResolvedValue(created);
+    vi.mocked(prisma.checkoutSession.update).mockResolvedValue({
+      ...created,
+      clientSecretHash: 'h',
+    });
+
+    const result = await createCheckoutSession({
+      apiKeyId: 'key_1',
+      mode: 'buy',
+      listingId: 'lst_1',
+      merchantId: 'mrc_1',
+    });
+
+    expect(vi.mocked(prisma.checkoutSession.create).mock.calls[0]![0].data.merchantId).toBe(
+      'mrc_1',
+    );
+    expect(result.merchantId).toBe('mrc_1');
   });
 });

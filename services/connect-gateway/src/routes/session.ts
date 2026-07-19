@@ -1,6 +1,7 @@
 import type { ApiKey, CheckoutMode, Prisma } from '@prisma/client';
 import { Hono } from 'hono';
 import { SessionError, sessionErrorStatus, toGatewayErrorBody } from '../errors.js';
+import { findActiveMerchant } from '../merchants.js';
 import { idempotency } from '../middleware/idempotency.js';
 import { createCheckoutSession, refreshCheckoutSession } from '../sessions.js';
 
@@ -20,6 +21,7 @@ session.post('/', idempotency(), async (c) => {
     listingId?: string;
     quote?: Record<string, unknown>;
     mode?: string;
+    merchantId?: string;
   }>();
 
   const hasListingId = typeof body.listingId === 'string' && body.listingId.length > 0;
@@ -51,12 +53,39 @@ session.post('/', idempotency(), async (c) => {
     );
   }
 
+  let merchantId: string | undefined;
+  if (body.merchantId !== undefined) {
+    if (typeof body.merchantId !== 'string' || body.merchantId.length === 0) {
+      return c.json(
+        toGatewayErrorBody(
+          'validation_error',
+          'invalid_request',
+          'merchantId must be a non-empty string',
+        ),
+        400,
+      );
+    }
+    const merchant = await findActiveMerchant(apiKey.id, body.merchantId);
+    if (!merchant) {
+      return c.json(
+        toGatewayErrorBody(
+          'validation_error',
+          'invalid_request',
+          'merchantId is unknown, disabled, or not owned by this key',
+        ),
+        400,
+      );
+    }
+    merchantId = merchant.id;
+  }
+
   try {
     const result = await createCheckoutSession({
       apiKeyId: apiKey.id,
       mode: body.mode,
       listingId: hasListingId ? body.listingId : undefined,
       quote: hasQuote ? (body.quote as Prisma.InputJsonValue) : undefined,
+      merchantId,
     });
 
     return c.json({
@@ -64,6 +93,7 @@ session.post('/', idempotency(), async (c) => {
       clientSecret: result.clientSecret,
       expiresAt: result.expiresAt.toISOString(),
       mode: result.mode,
+      merchantId: result.merchantId,
     });
   } catch (error) {
     if (error instanceof SessionError) {

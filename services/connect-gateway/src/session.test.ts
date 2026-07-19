@@ -62,6 +62,7 @@ describe('session routes', () => {
       clientSecret: 'cs_session_1_signature',
       expiresAt: new Date('2024-01-01T00:15:00.000Z'),
       mode: 'buy',
+      merchantId: null,
     });
 
     const app = createApp();
@@ -152,6 +153,7 @@ describe('session routes', () => {
       clientSecret: 'cs_session_1_new_signature',
       expiresAt: new Date('2024-01-01T00:30:00.000Z'),
       mode: 'sell',
+      merchantId: null,
     });
 
     const app = createApp();
