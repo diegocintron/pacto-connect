@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getSimulator, resetSimulator, SimulatorError } from './simulator.js';
+import { getSimulator, resetSimulator, setSettlementSink, SimulatorError } from './simulator.js';
 
 describe('EscrowSimulator', () => {
   beforeEach(() => {
@@ -247,5 +247,42 @@ describe('EscrowSimulator', () => {
       'key_1',
     );
     expect(received).toEqual(['escrow.funded']);
+  });
+
+  it('fires the settlement sink once when a merchant escrow releases', () => {
+    const sim = getSimulator();
+    sim.reset();
+    const calls: Array<{ merchantId: string; escrowId: string; amount: number; asset: string }> = [];
+    setSettlementSink((s) => calls.push(s));
+
+    const escrow = sim.createEscrow({
+      apiKeyId: 'key_1',
+      sessionId: 'sess_1',
+      quoteId: 'q_1',
+      amount: '250',
+      asset: 'USDC',
+      merchantId: 'mrc_1',
+    });
+    sim.deposit('sess_1', escrow.id, 'key_1');
+    sim.forceRelease('sess_1', escrow.id, 'key_1');
+
+    expect(calls).toEqual([
+      { merchantId: 'mrc_1', escrowId: escrow.id, amount: 250, asset: 'USDC' },
+    ]);
+    setSettlementSink(null);
+  });
+
+  it('does not fire the settlement sink for an escrow without a merchant', () => {
+    const sim = getSimulator();
+    sim.reset();
+    const calls: unknown[] = [];
+    setSettlementSink((s) => calls.push(s));
+    const escrow = sim.createEscrow({
+      apiKeyId: 'key_1', sessionId: 'sess_1', quoteId: 'q_1', amount: '100', asset: 'USDC',
+    });
+    sim.deposit('sess_1', escrow.id, 'key_1');
+    sim.forceRelease('sess_1', escrow.id, 'key_1');
+    expect(calls).toHaveLength(0);
+    setSettlementSink(null);
   });
 });

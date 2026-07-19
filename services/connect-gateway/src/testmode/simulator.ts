@@ -22,6 +22,19 @@ const MILESTONE_BY_EVENT: Record<EscrowEventName, EscrowMilestone> = {
   disputed: 'disputed',
 };
 
+export type SettlementSink = (settlement: {
+  merchantId: string;
+  escrowId: string;
+  amount: number;
+  asset: string;
+}) => void;
+
+let settlementSink: SettlementSink | null = null;
+
+export function setSettlementSink(sink: SettlementSink | null): void {
+  settlementSink = sink;
+}
+
 export interface SimulatorEscrow {
   id: string;
   quoteId: string;
@@ -32,6 +45,7 @@ export interface SimulatorEscrow {
   asset: string;
   createdAt: string;
   updatedAt: string;
+  merchantId?: string;
 }
 
 export interface SimulatorEvent {
@@ -57,6 +71,7 @@ interface EscrowRecord {
   updatedAt: string;
   fiatReported: boolean;
   releaseTimer?: ReturnType<typeof setTimeout>;
+  merchantId?: string;
 }
 
 function getReleaseDelayMs(): number {
@@ -88,6 +103,7 @@ function toPublicEscrow(record: EscrowRecord): SimulatorEscrow {
     asset: record.asset,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
+    merchantId: record.merchantId,
   };
 }
 
@@ -129,6 +145,7 @@ class EscrowSimulator {
     quoteId: string;
     amount: string;
     asset: string;
+    merchantId?: string;
   }): SimulatorEscrow {
     const now = new Date().toISOString();
     const id = `esc_${randomUUID()}`;
@@ -143,6 +160,7 @@ class EscrowSimulator {
       createdAt: now,
       updatedAt: now,
       fiatReported: false,
+      merchantId: input.merchantId,
     };
 
     this.escrows.set(escrowKey(input.apiKeyId, input.sessionId, id), record);
@@ -222,6 +240,7 @@ class EscrowSimulator {
     record.status = 'released';
     record.updatedAt = new Date().toISOString();
     this.emitEvent(record, 'released');
+    this.recordSettlement(record);
     return toPublicEscrow(record);
   }
 
@@ -349,6 +368,22 @@ class EscrowSimulator {
     return event;
   }
 
+  private recordSettlement(record: EscrowRecord): void {
+    if (!record.merchantId || !settlementSink) {
+      return;
+    }
+    const amount = Number(record.amount);
+    if (!Number.isFinite(amount)) {
+      return;
+    }
+    settlementSink({
+      merchantId: record.merchantId,
+      escrowId: record.id,
+      amount,
+      asset: record.asset,
+    });
+  }
+
   private cancelReleaseTimer(record: EscrowRecord): void {
     if (record.releaseTimer) {
       clearTimeout(record.releaseTimer);
@@ -369,6 +404,7 @@ class EscrowSimulator {
       record.status = 'released';
       record.updatedAt = new Date().toISOString();
       this.emitEvent(record, 'released');
+      this.recordSettlement(record);
     }, getReleaseDelayMs());
   }
 }
