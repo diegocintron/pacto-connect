@@ -1,6 +1,11 @@
 import type { Prisma } from '@prisma/client';
 import { type DispatchResult, dispatchEvent } from './delivery.js';
 
+// NOTE (multi-merchant): the escrow-lifecycle emitters below are currently
+// dormant (no callers; live escrow webhooks are not wired yet). When live
+// escrow webhooks are implemented, thread the escrow's `merchantId` through to
+// `dispatchEvent({ ..., merchantId })` — otherwise these events would leak to
+// platform-level endpoints instead of the sub-merchant's. See MULTI_MERCHANT.md.
 export const emitEscrowCreated = (
   apiKeyId: string,
   data: Prisma.InputJsonValue,

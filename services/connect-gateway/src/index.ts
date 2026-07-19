@@ -13,7 +13,9 @@ serve({ fetch: app.fetch, port }, (info) => {
   startSubscriptionRunner();
   console.log('subscription runner started');
   setSettlementSink((s) => {
-    void recordSettlement(s);
+    recordSettlement(s).catch((error) => {
+      console.error('failed to record merchant settlement', error);
+    });
   });
 });
 

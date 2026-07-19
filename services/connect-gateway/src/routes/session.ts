@@ -125,6 +125,7 @@ session.post('/refresh', async (c) => {
       clientSecret: result.clientSecret,
       expiresAt: result.expiresAt.toISOString(),
       mode: result.mode,
+      merchantId: result.merchantId,
     });
   } catch (error) {
     if (error instanceof SessionError) {
