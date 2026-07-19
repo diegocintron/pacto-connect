@@ -1,0 +1,268 @@
+---
+title: Theming & i18n
+---
+
+import { Tabs, Callout } from 'nextra/components'
+
+# Theming & i18n
+
+The checkout widget is white-label: restyle it with CSS variables, drop in your
+own logo, and localize the copy — identically whether you're using
+`@pacto-connect/react` or `@pacto-connect/elements`.
+
+## Design tokens (CSS variables)
+
+Every themeable value in the widget's stylesheet is written as
+`var(--pacto-*, <default>)`, so you can override any subset of these variables
+— via the `theme` prop/option, or directly in your own CSS — and everything
+else falls back to its default.
+
+| Variable | Purpose | Default |
+| --- | --- | --- |
+| `--pacto-color-primary` | Buttons / accents | `#4f46e5` |
+| `--pacto-color-primary-text` | Text on primary | `#ffffff` |
+| `--pacto-color-surface` | Dialog background | `#ffffff` |
+| `--pacto-color-text` | Body text | `#0f172a` |
+| `--pacto-color-muted-text` | Secondary text | `#475569` |
+| `--pacto-color-border` | Borders / dividers | `#cbd5e1` |
+| `--pacto-color-overlay` | Backdrop | `rgba(15, 23, 42, 0.55)` |
+| `--pacto-color-danger` | Errors | `#b91c1c` |
+| `--pacto-font-family` | Font family | `system-ui, -apple-system, "Segoe UI", Roboto, sans-serif` |
+| `--pacto-font-size` | Base control size | `0.875rem` |
+| `--pacto-font-heading-size` | Header title size | `1.125rem` |
+| `--pacto-radius` | Corner radius | `0.75rem` |
+| `--pacto-space` | Dialog padding | `1.5rem` |
+
+### Setting a theme
+
+`theme` maps onto that variable table — nest colors under `colors` and
+typography under `typography`. You only need to pass the tokens you want to
+change.
+
+<Tabs items={['React', 'Web component']}>
+
+<Tabs.Tab>
+
+```tsx
+import { PactoCheckout } from '@pacto-connect/react'
+
+<PactoCheckout
+  publishableKey="pk_test_..."
+  open
+  onClose={() => {}}
+  theme={{ colors: { primary: '#e11d48' }, radius: '4px' }}
+  logoUrl="https://cdn.acme.com/logo.svg"
+  logoAlt="Acme"
+  locale="es"
+/>
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+```html filename="index.html"
+<div id="checkout-root"></div>
+
+<script type="module">
+  import { pacto } from '@pacto-connect/elements'
+
+  pacto.mount('#checkout-root', {
+    publishableKey: 'pk_test_...',
+    theme: { colors: { primary: '#e11d48' }, radius: '4px' },
+    logoUrl: 'https://cdn.acme.com/logo.svg',
+    logoAlt: 'Acme',
+    locale: 'es',
+  })
+</script>
+```
+
+`theme` and `messages` take object values, so — unlike `locale`, `logo-url`,
+and `logo-alt` — they aren't exposed as HTML attributes. To pass them, configure
+the element with `pacto.mount()` and the `theme` option (shown above), which
+applies the full config before the widget opens.
+
+For a purely declarative `<pacto-checkout>` embed, set the design tokens as CSS
+variables instead (see [Restyling without a `theme` prop](#restyling-without-a-theme-prop)
+below). Every `theme` token maps to a `--pacto-*` variable, so this achieves the
+same styling with no JS config:
+
+```html
+<pacto-checkout
+  publishable-key="pk_test_..."
+  locale="es"
+  logo-url="https://cdn.acme.com/logo.svg"
+  logo-alt="Acme"
+  open
+></pacto-checkout>
+
+<style>
+  /* Same result as theme={{ colors: { primary: '#e11d48' }, radius: '4px' }} */
+  :root {
+    --pacto-color-primary: #e11d48;
+    --pacto-radius: 4px;
+  }
+</style>
+```
+
+</Tabs.Tab>
+
+</Tabs>
+
+Both integrations accept the **exact same `theme` shape** — `{ colors, typography, radius, spacing }`, all optional and all deep-mergeable.
+
+### Restyling without a `theme` prop
+
+Plain-HTML embeds (or hosts that just want a global brand stylesheet) can set
+the variables directly in CSS, no JS config required:
+
+```css
+:root {
+  --pacto-color-primary: #e11d48;
+  --pacto-radius: 4px;
+}
+```
+
+<Callout type="warning">
+  Set variables on `:root` or on an ancestor of the widget (for the web
+  component, the `pacto-checkout` element itself works). `--pacto-color-overlay`
+  in particular styles the backdrop, which is a **parent** of the dialog — so
+  scoping variables to `.pacto-checkout-dialog` alone won't reach it.
+</Callout>
+
+## Brand logo
+
+Pass `logoUrl` (React prop / mount option) or the `logo-url` attribute (web
+component) to render an `<img class="pacto-checkout-logo">` next to the step
+title in the header. Pair it with `logoAlt` / `logo-alt` for accessible alt
+text. Size the logo with your own CSS:
+
+```css
+.pacto-checkout-logo {
+  max-height: 2rem;
+}
+```
+
+<Callout type="info">
+  Both integrations inject one default stylesheet (`<style id="pacto-checkout-styles">`) the first time the widget opens. Pass `injectStyles={false}` (React prop), `injectStyles: false` (mount option), or `inject-styles="false"` (attribute) to skip it and fully own the CSS.
+</Callout>
+
+## Localization
+
+Supported locales out of the box: `en` (default) and `es`. Set `locale` the
+same way in either integration:
+
+<Tabs items={['React', 'Web component']}>
+
+<Tabs.Tab>
+
+```tsx
+<PactoCheckout publishableKey="pk_test_..." open onClose={() => {}} locale="es" />
+```
+
+</Tabs.Tab>
+
+<Tabs.Tab>
+
+```js
+pacto.mount('#checkout-root', { publishableKey: 'pk_test_...', locale: 'es' })
+```
+
+or as an attribute on the custom element directly:
+
+```html
+<pacto-checkout publishable-key="pk_test_..." locale="es" open></pacto-checkout>
+```
+
+</Tabs.Tab>
+
+</Tabs>
+
+### Overriding individual strings
+
+`messages` is deep-merged over the selected locale's dictionary, so you can
+patch a handful of strings without replacing the rest:
+
+```tsx
+<PactoCheckout
+  // …
+  locale="es"
+  messages={{ actions: { confirmDeposit: 'Pagar ahora' } }}
+/>
+```
+
+```js
+pacto.mount('#checkout-root', {
+  // …
+  locale: 'es',
+  messages: { actions: { confirmDeposit: 'Pagar ahora' } },
+})
+```
+
+### Adding a new language
+
+To add a language that isn't built in, don't fork the package — supply a
+**complete** `messages` object matching the `PactoMessages` shape. It fully
+replaces the resolved copy regardless of which built-in `locale` you leave
+selected:
+
+```ts
+interface PactoMessages {
+  steps: Record<
+    | 'loading'
+    | 'selectListing'
+    | 'deposit'
+    | 'uploadReceipt'
+    | 'tracking'
+    | 'success'
+    | 'disputed'
+    | 'error',
+    string
+  >
+  milestones: Record<'escrow.funded' | 'fiat.reported' | 'released' | 'disputed', string>
+  actions: {
+    close: string
+    closeAria: string
+    retry: string
+    confirmDeposit: string
+    submitReceipt: string
+    forceRelease: string
+    forceDispute: string
+    forceTimeout: string
+  }
+  labels: {
+    paymentMethod: string
+    reference: string
+    referenceAria: string
+    availableListings: string
+    escrowMilestones: string
+    simulatorControls: string
+    loading: string
+    waiting: string
+    testBanner: string
+    genericError: string
+    depositInstruction: string // placeholders: {amount} {asset}
+    success: string // placeholder: {escrowId}
+    disputed: string // placeholder: {escrowId}
+  }
+}
+```
+
+```tsx
+import type { PactoMessages } from '@pacto-connect/core'
+
+const fr: PactoMessages = {
+  steps: { /* … all 8 keys … */ },
+  milestones: { /* … all 4 keys … */ },
+  actions: { /* … all 8 keys … */ },
+  labels: { /* … all 13 keys … */ },
+} as PactoMessages
+
+<PactoCheckout publishableKey="pk_test_..." open onClose={() => {}} messages={fr} />
+```
+
+## Next steps
+
+- [Quickstart](/quickstart) — install and mount the widget
+- [API Reference](/api-reference) — full type documentation for `theme`, `messages`, and every other prop/option
+- [Playground](/playground) — try theme and locale values live and copy the generated snippet
