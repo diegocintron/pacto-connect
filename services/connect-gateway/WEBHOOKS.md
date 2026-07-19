@@ -40,7 +40,8 @@ Register a new endpoint for an API key.
   "apiKeyId": "key_…",
   "url": "https://example.com/webhooks/pacto",
   "enabledEvents": ["escrow.created", "trade.completed"],
-  "description": "Production webhook"
+  "description": "Production webhook",
+  "merchantId": "mrc_…"
 }
 ```
 
@@ -50,6 +51,7 @@ Register a new endpoint for an API key.
 | `url` | yes | Must be a valid `http:` or `https:` URL. |
 | `enabledEvents` | yes | Non-empty array; each value must be one of the event types above. |
 | `description` | no | Optional label for operators. |
+| `merchantId` | no | Scope this endpoint to a sub-merchant. When set, the endpoint only receives events for that sub-merchant; when omitted, it only receives platform-level (non-merchant) events. Must be an `active` sub-merchant owned by `apiKeyId` (else `400`). See [Multi-merchant](./MULTI_MERCHANT.md). |
 
 **Response `201`**
 
@@ -59,9 +61,9 @@ Register a new endpoint for an API key.
 
 The `secret` (prefix `whsec_`) is returned **once** at creation. Store it immediately; list and fetch routes never include it.
 
-### `GET /admin/webhooks?apiKeyId=`
+### `GET /admin/webhooks?apiKeyId=&merchantId=`
 
-List endpoints. Optional `apiKeyId` filters to one API key.
+List endpoints. Optional `apiKeyId` filters to one API key; optional `merchantId` filters to one sub-merchant. With no `merchantId` filter, endpoints for all of the key's sub-merchants (and its platform-level endpoints) are returned.
 
 **Response `200`**
 
@@ -152,7 +154,7 @@ The endpoint must:
 
 On success the endpoint is marked `verified: true`. On failure the response includes `{ "verified": false, "error": "…" }` and `verified` stays `false`.
 
-`dispatchEvent` only creates deliveries for endpoints that are **enabled**, **verified**, and subscribed to the event type (`enabledEvents` contains the type).
+`dispatchEvent` only creates deliveries for endpoints that are **enabled**, **verified**, and subscribed to the event type (`enabledEvents` contains the type). Delivery is also scoped by sub-merchant: an event carrying a `merchantId` reaches only endpoints scoped to that same sub-merchant, and an event with no `merchantId` reaches only platform-level (`merchantId`-null) endpoints. See [Multi-merchant](./MULTI_MERCHANT.md).
 
 ## Signing & verifying deliveries
 
@@ -321,6 +323,8 @@ Verification rejects a request when:
 **Response `500`** — `PACTO_WEBHOOK_SECRET` is not configured, or event dispatch failed after a valid signature.
 
 **Response `200`** — accepted: `{ "received": true, "eventId": "…", "deduped": <boolean> }`. `deduped: true` means an event with the same source event id was already processed and no new side effects were applied.
+
+The JSON payload may include an optional `merchantId` to route the event to a specific sub-merchant's endpoints. When present it must be an `active` sub-merchant owned by the payload's `apiKeyId`, otherwise the request is rejected with `400 invalid_payload`. See [Multi-merchant](./MULTI_MERCHANT.md).
 
 **Configuration**
 
