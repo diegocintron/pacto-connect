@@ -128,14 +128,23 @@ describe('subscription routes', () => {
     const res = await app.request('/v1/subscriptions', {
       method: 'POST',
       headers: headers(),
-      body: JSON.stringify({ from: 'USD', to: 'CRC', amount: 100, interval: 'month', payerRef: 'cust_42' }),
+      body: JSON.stringify({
+        from: 'USD',
+        to: 'CRC',
+        amount: 100,
+        interval: 'month',
+        payerRef: 'cust_42',
+      }),
     });
 
     expect(res.status).toBe(200);
     const body = (await res.json()) as { subscription: { id: string; status: string } };
     expect(body.subscription.id).toBe('sub_1');
     expect(body.subscription.status).toBe('active');
-    expect(emitSubscriptionCreated).toHaveBeenCalledWith('key_1', expect.objectContaining({ subscriptionId: 'sub_1' }));
+    expect(emitSubscriptionCreated).toHaveBeenCalledWith(
+      'key_1',
+      expect.objectContaining({ subscriptionId: 'sub_1' }),
+    );
     expect(emitSubscriptionCreated).toHaveBeenCalledTimes(1);
   });
 
@@ -163,7 +172,11 @@ describe('subscription routes', () => {
   it('POST /v1/subscriptions on a live key returns 501', async () => {
     const app = createApp();
     clientSecret = buildClientSecret('session_1', liveApiKey.id, sessionExpiresAt);
-    vi.mocked(prisma.checkoutSession.findUnique).mockResolvedValue({ ...mockSession, apiKeyId: liveApiKey.id, clientSecretHash: hashClientSecret(clientSecret) });
+    vi.mocked(prisma.checkoutSession.findUnique).mockResolvedValue({
+      ...mockSession,
+      apiKeyId: liveApiKey.id,
+      clientSecretHash: hashClientSecret(clientSecret),
+    });
     const res = await app.request('/v1/subscriptions', {
       method: 'POST',
       headers: headers(liveApiKey),
@@ -203,13 +216,21 @@ describe('subscription routes', () => {
 
   it('POST /v1/subscriptions/:id/cancel cancels and emits subscription.canceled', async () => {
     vi.mocked(prisma.subscription.findFirst).mockResolvedValue(buildSub());
-    vi.mocked(prisma.subscription.update).mockResolvedValue(buildSub({ status: 'canceled', canceledAt: now }));
+    vi.mocked(prisma.subscription.update).mockResolvedValue(
+      buildSub({ status: 'canceled', canceledAt: now }),
+    );
     const app = createApp();
-    const res = await app.request('/v1/subscriptions/sub_1/cancel', { method: 'POST', headers: headers() });
+    const res = await app.request('/v1/subscriptions/sub_1/cancel', {
+      method: 'POST',
+      headers: headers(),
+    });
     expect(res.status).toBe(200);
     const body = (await res.json()) as { subscription: { status: string } };
     expect(body.subscription.status).toBe('canceled');
-    expect(emitSubscriptionCanceled).toHaveBeenCalledWith('key_1', expect.objectContaining({ subscriptionId: 'sub_1' }));
+    expect(emitSubscriptionCanceled).toHaveBeenCalledWith(
+      'key_1',
+      expect.objectContaining({ subscriptionId: 'sub_1' }),
+    );
     expect(emitSubscriptionCanceled).toHaveBeenCalledTimes(1);
   });
 });

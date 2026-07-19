@@ -33,8 +33,16 @@ describe('subscription runner', () => {
       { id: 'sub_2' },
     ] as never);
     vi.mocked(chargeSubscription)
-      .mockResolvedValueOnce({ subscriptionId: 'sub_1', status: 'succeeded', subscriptionStatus: 'active' })
-      .mockResolvedValueOnce({ subscriptionId: 'sub_2', status: 'failed', subscriptionStatus: 'active' });
+      .mockResolvedValueOnce({
+        subscriptionId: 'sub_1',
+        status: 'succeeded',
+        subscriptionStatus: 'active',
+      })
+      .mockResolvedValueOnce({
+        subscriptionId: 'sub_2',
+        status: 'failed',
+        subscriptionStatus: 'active',
+      });
 
     const tally = await runDueSubscriptions({ now });
 

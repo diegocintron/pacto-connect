@@ -120,7 +120,9 @@ describe('PactoApiClient test namespace', () => {
   });
 
   it('advanceSubscription posts to /v1/test/subscriptions/:id/advance', async () => {
-    vi.mocked(fetch).mockResolvedValue(mockFetchResponse(200, { result: { ok: true } }) as Response);
+    vi.mocked(fetch).mockResolvedValue(
+      mockFetchResponse(200, { result: { ok: true } }) as Response,
+    );
 
     const api = createApiClient(clientOptions);
     await api.test.advanceSubscription('sub_1');
@@ -225,8 +227,14 @@ describe('PactoApiClient subscriptions', () => {
   });
 
   it('cancel posts to /v1/subscriptions/:id/cancel', async () => {
-    const canceled = { ...subscription, status: 'canceled' as const, canceledAt: '2024-03-01T00:00:00.000Z' };
-    vi.mocked(fetch).mockResolvedValue(mockFetchResponse(200, { subscription: canceled }) as Response);
+    const canceled = {
+      ...subscription,
+      status: 'canceled' as const,
+      canceledAt: '2024-03-01T00:00:00.000Z',
+    };
+    vi.mocked(fetch).mockResolvedValue(
+      mockFetchResponse(200, { subscription: canceled }) as Response,
+    );
 
     const api = createApiClient(clientOptions);
     const response = await api.subscriptions.cancel('sub_1');
