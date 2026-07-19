@@ -6,7 +6,9 @@ vi.mock('../merchants.js', () => ({
   setMerchantStatus: vi.fn(),
 }));
 vi.mock('../db.js', () => ({ prisma: { apiKey: { findUnique: vi.fn() } } }));
-vi.mock('../middleware/admin.js', () => ({ adminAuth: (_c: unknown, next: () => Promise<void>) => next() }));
+vi.mock('../middleware/admin.js', () => ({
+  adminAuth: (_c: unknown, next: () => Promise<void>) => next(),
+}));
 
 import { prisma } from '../db.js';
 import { createMerchant, listMerchantsForApiKey, setMerchantStatus } from '../merchants.js';
@@ -25,17 +27,22 @@ describe('admin merchant routes', () => {
     vi.mocked(prisma.apiKey.findUnique).mockResolvedValue({ id: 'key_1' } as never);
     vi.mocked(createMerchant).mockResolvedValue({ id: 'mrc_1', name: 'Acme' } as never);
     const res = await adminRoutes.request('/keys/key_1/merchants', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Acme' }),
     });
     expect(res.status).toBe(201);
-    expect(vi.mocked(createMerchant).mock.calls[0]![0]).toEqual({ apiKeyId: 'key_1', name: 'Acme' });
+    expect(vi.mocked(createMerchant).mock.calls[0]![0]).toEqual({
+      apiKeyId: 'key_1',
+      name: 'Acme',
+    });
   });
 
   it('POST 404s for an unknown key', async () => {
     vi.mocked(prisma.apiKey.findUnique).mockResolvedValue(null);
     const res = await adminRoutes.request('/keys/key_x/merchants', {
-      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Acme' }),
     });
     expect(res.status).toBe(404);

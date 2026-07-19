@@ -153,9 +153,17 @@ describe('webhook delivery engine', () => {
   });
 
   it('dispatchEvent scopes endpoint lookup to the merchant when merchantId is set', async () => {
-    vi.mocked(prisma.webhookEvent.create).mockResolvedValue({ ...mockEvent, merchantId: 'mrc_1' } as never);
+    vi.mocked(prisma.webhookEvent.create).mockResolvedValue({
+      ...mockEvent,
+      merchantId: 'mrc_1',
+    } as never);
     vi.mocked(prisma.webhookEndpoint.findMany).mockResolvedValue([]);
-    await dispatchEvent({ apiKeyId: 'key_1', merchantId: 'mrc_1', type: 'escrow.created', data: {} });
+    await dispatchEvent({
+      apiKeyId: 'key_1',
+      merchantId: 'mrc_1',
+      type: 'escrow.created',
+      data: {},
+    });
     const findManyCall = vi.mocked(prisma.webhookEndpoint.findMany).mock.calls[0]?.[0];
     const createCall = vi.mocked(prisma.webhookEvent.create).mock.calls[0]?.[0];
     expect(findManyCall?.where?.merchantId).toBe('mrc_1');

@@ -81,10 +81,7 @@ describe('inbound webhook receiver', () => {
       merchantId: 'mrc_1',
     });
 
-    const res = await buildApp().request(
-      '/v1/webhooks/inbound',
-      signedRequest(bodyWithMerchant),
-    );
+    const res = await buildApp().request('/v1/webhooks/inbound', signedRequest(bodyWithMerchant));
 
     expect(res.status).toBe(200);
     expect(findActiveMerchant).toHaveBeenCalledWith('key_1', 'mrc_1');
@@ -109,10 +106,7 @@ describe('inbound webhook receiver', () => {
       merchantId: 'mrc_unknown',
     });
 
-    const res = await buildApp().request(
-      '/v1/webhooks/inbound',
-      signedRequest(bodyWithMerchant),
-    );
+    const res = await buildApp().request('/v1/webhooks/inbound', signedRequest(bodyWithMerchant));
 
     expect(res.status).toBe(400);
     expect((await res.json()).error.code).toBe('invalid_payload');

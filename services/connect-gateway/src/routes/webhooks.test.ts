@@ -45,9 +45,9 @@ vi.mock('../keys.js', () => ({
   generateKeyPair: vi.fn(),
 }));
 
+import { findActiveMerchant } from '../merchants.js';
 import * as delivery from '../webhooks/delivery.js';
 import * as endpoints from '../webhooks/endpoints.js';
-import { findActiveMerchant } from '../merchants.js';
 
 describe('admin webhook routes', () => {
   beforeEach(() => {

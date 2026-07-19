@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { getSimulator, resetSimulator, setSettlementSink, SimulatorError } from './simulator.js';
+import { getSimulator, resetSimulator, SimulatorError, setSettlementSink } from './simulator.js';
 
 describe('EscrowSimulator', () => {
   beforeEach(() => {
@@ -252,7 +252,8 @@ describe('EscrowSimulator', () => {
   it('fires the settlement sink once when a merchant escrow releases', () => {
     const sim = getSimulator();
     sim.reset();
-    const calls: Array<{ merchantId: string; escrowId: string; amount: number; asset: string }> = [];
+    const calls: Array<{ merchantId: string; escrowId: string; amount: number; asset: string }> =
+      [];
     setSettlementSink((s) => calls.push(s));
 
     const escrow = sim.createEscrow({
@@ -278,7 +279,11 @@ describe('EscrowSimulator', () => {
     const calls: unknown[] = [];
     setSettlementSink((s) => calls.push(s));
     const escrow = sim.createEscrow({
-      apiKeyId: 'key_1', sessionId: 'sess_1', quoteId: 'q_1', amount: '100', asset: 'USDC',
+      apiKeyId: 'key_1',
+      sessionId: 'sess_1',
+      quoteId: 'q_1',
+      amount: '100',
+      asset: 'USDC',
     });
     sim.deposit('sess_1', escrow.id, 'key_1');
     sim.forceRelease('sess_1', escrow.id, 'key_1');
