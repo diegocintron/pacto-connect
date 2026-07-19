@@ -41,6 +41,7 @@ function buildSub(overrides: Partial<Subscription> = {}): Subscription {
     canceledAt: null,
     createdAt: now,
     updatedAt: now,
+    merchantId: null,
     ...overrides,
   };
 }

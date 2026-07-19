@@ -58,6 +58,42 @@ enum SubscriptionChargeStatus {
   failed
 }
 
+enum MerchantStatus {
+  active
+  disabled
+}
+
+model Merchant {
+  id        String         @id @default(cuid())
+  apiKeyId  String
+  apiKey    ApiKey         @relation(fields: [apiKeyId], references: [id])
+  name      String
+  status    MerchantStatus @default(active)
+  createdAt DateTime       @default(now())
+  updatedAt DateTime       @updatedAt
+
+  sessions         CheckoutSession[]
+  webhookEndpoints WebhookEndpoint[]
+  webhookEvents    WebhookEvent[]
+  subscriptions    Subscription[]
+  settlements      MerchantSettlement[]
+
+  @@index([apiKeyId])
+  @@index([status])
+}
+
+model MerchantSettlement {
+  id         String   @id @default(cuid())
+  merchantId String
+  merchant   Merchant @relation(fields: [merchantId], references: [id])
+  escrowId   String   @unique
+  amount     Float
+  asset      String
+  settledAt  DateTime @default(now())
+
+  @@index([merchantId])
+}
+
 model ApiKey {
   id             String           @id @default(cuid())
   publishableKey String           @unique
@@ -74,6 +110,7 @@ model ApiKey {
   webhookEndpoints   WebhookEndpoint[]
   webhookEvents      WebhookEvent[]
   subscriptions      Subscription[]
+  merchants          Merchant[]
 
   @@index([publishableKey])
   @@index([status])
@@ -92,9 +129,12 @@ model CheckoutSession {
   refreshCount     Int           @default(0)
   createdAt        DateTime      @default(now())
   updatedAt        DateTime      @updatedAt
+  merchantId       String?
+  merchant         Merchant?     @relation(fields: [merchantId], references: [id])
 
   @@index([apiKeyId])
   @@index([status])
+  @@index([merchantId])
 }
 
 model WebhookEndpoint {
@@ -110,9 +150,12 @@ model WebhookEndpoint {
   createdAt     DateTime              @default(now())
   updatedAt     DateTime              @updatedAt
   deliveries    WebhookDelivery[]
+  merchantId    String?
+  merchant      Merchant?             @relation(fields: [merchantId], references: [id])
 
   @@index([apiKeyId])
   @@index([status])
+  @@index([merchantId])
 }
 
 model WebhookEvent {
@@ -124,9 +167,12 @@ model WebhookEvent {
   sourceEventId String? @unique
   createdAt  DateTime          @default(now())
   deliveries WebhookDelivery[]
+  merchantId String?
+  merchant   Merchant?         @relation(fields: [merchantId], references: [id])
 
   @@index([apiKeyId])
   @@index([type])
+  @@index([merchantId])
 }
 
 model Subscription {
@@ -148,9 +194,12 @@ model Subscription {
   createdAt      DateTime            @default(now())
   updatedAt      DateTime            @updatedAt
   charges        SubscriptionCharge[]
+  merchantId     String?
+  merchant       Merchant?           @relation(fields: [merchantId], references: [id])
 
   @@index([apiKeyId])
   @@index([status, nextChargeAt])
+  @@index([merchantId])
 }
 
 model SubscriptionCharge {

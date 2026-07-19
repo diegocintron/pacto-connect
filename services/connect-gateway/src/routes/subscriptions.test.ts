@@ -79,6 +79,7 @@ function buildSub(overrides: Partial<Subscription> = {}): Subscription {
     canceledAt: null,
     createdAt: now,
     updatedAt: now,
+    merchantId: null,
     ...overrides,
   };
 }
@@ -114,6 +115,7 @@ describe('subscription routes', () => {
       refreshCount: 0,
       createdAt: now,
       updatedAt: now,
+      merchantId: null,
     };
     vi.mocked(keys.findActiveApiKeyByPublishableKey).mockImplementation(async (pk: string) =>
       pk === liveApiKey.publishableKey ? liveApiKey : mockApiKey,

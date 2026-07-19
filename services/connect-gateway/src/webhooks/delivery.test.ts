@@ -12,6 +12,7 @@ const mockEndpoint = {
   description: null,
   createdAt: new Date('2024-06-01T12:00:00.000Z'),
   updatedAt: new Date('2024-06-01T12:00:00.000Z'),
+  merchantId: null,
 };
 
 const mockEvent = {
@@ -21,6 +22,7 @@ const mockEvent = {
   data: { escrowId: 'esc_1' },
   sourceEventId: null,
   createdAt: new Date('2024-06-01T12:00:00.000Z'),
+  merchantId: null,
 };
 
 const mockDeliveryBase = {
