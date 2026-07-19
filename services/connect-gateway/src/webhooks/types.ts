@@ -3,6 +3,10 @@ export const WEBHOOK_EVENT_TYPES = [
   'trade.completed',
   'dispute.opened',
   'payment.reported',
+  'subscription.created',
+  'subscription.charged',
+  'subscription.failed',
+  'subscription.canceled',
 ] as const;
 
 export type WebhookEventType = (typeof WEBHOOK_EVENT_TYPES)[number];

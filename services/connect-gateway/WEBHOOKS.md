@@ -16,8 +16,14 @@ Authorization: Bearer $GATEWAY_ADMIN_TOKEN
 | `trade.completed` | A trade reached a completed state. |
 | `dispute.opened` | A dispute was opened on a trade. |
 | `payment.reported` | A payment was reported for a trade. |
+| `subscription.created` | A recurring subscription was created. |
+| `subscription.charged` | A subscription billing cycle succeeded and created an escrow. |
+| `subscription.failed` | A subscription charge exhausted its retry budget and stopped. |
+| `subscription.canceled` | A subscription was canceled; future charges stop. |
 
 `endpoint.verification` is a reserved system event used only during URL verification. It is not subscribable and will never appear in `enabledEvents`.
+
+See [Subscription events](#subscription-events) for the recurring-payment lifecycle and payloads.
 
 ## Registering an endpoint
 
@@ -42,7 +48,7 @@ Register a new endpoint for an API key.
 | --- | --- | --- |
 | `apiKeyId` | yes | API key that owns this endpoint. |
 | `url` | yes | Must be a valid `http:` or `https:` URL. |
-| `enabledEvents` | yes | Non-empty array; each value must be one of the four event types above. |
+| `enabledEvents` | yes | Non-empty array; each value must be one of the event types above. |
 | `description` | no | Optional label for operators. |
 
 **Response `201`**
@@ -209,6 +215,33 @@ delay = min(WEBHOOK_BACKOFF_BASE_MS × 2^(attempt − 1), WEBHOOK_BACKOFF_CAP_MS
 
 After `WEBHOOK_MAX_ATTEMPTS` (default **5**) failed attempts the delivery moves to **`dead`** status and appears in the DLQ (`GET /admin/webhooks/dlq`). Operators can replay it with `POST /admin/webhooks/deliveries/:id/retry`, which resets it to `pending` and schedules an immediate attempt with a fresh attempt budget.
 
+## Subscription events
+
+Recurring subscriptions (`/v1/subscriptions`) drive a billing loop that reuses the escrow
+and quote engines. A background runner polls for subscriptions whose `nextChargeAt` is due
+and charges them without manual intervention; each event is delivered through the same
+signed-webhook pipeline as everything above. Subscriptions are **test mode only** — a
+live-mode key receives `501 not_implemented`.
+
+| Event type | When | Payload `data` |
+| --- | --- | --- |
+| `subscription.created` | A subscription is created via `POST /v1/subscriptions`. | `subscriptionId`, `from`, `to`, `amount`, `interval` |
+| `subscription.charged` | A billing cycle succeeds: an escrow is created and the FX is re-priced via the quote engine. | `subscriptionId`, `escrowId`, `amount`, `asset`, `quoteId` |
+| `subscription.failed` | A charge has failed `SUBSCRIPTION_MAX_ATTEMPTS` times. The subscription moves to `past_due` and **stops charging** (no indefinite retry). | `subscriptionId`, `reason`, `attempts` |
+| `subscription.canceled` | The subscription is canceled via `POST /v1/subscriptions/:id/cancel`. Future charges stop. | `subscriptionId` |
+
+**Charge lifecycle.** On each cycle the runner re-prices the plan with the quote engine and
+creates an escrow, then emits `subscription.charged`. A failed charge is retried with
+exponential backoff up to `SUBSCRIPTION_MAX_ATTEMPTS` total attempts; once exhausted the
+subscription becomes `past_due`, emits `subscription.failed` exactly once, and is no longer
+picked up by the runner. Canceling a subscription is terminal and emits
+`subscription.canceled`.
+
+**Test controls.** In test mode, `POST /v1/test/subscriptions/:id/advance` runs one charge
+synchronously (deterministic, no waiting for the poll interval), and
+`POST /v1/test/subscriptions/:id/fail-next` forces the next charge to fail with
+`insufficient_funds` — useful for exercising the `subscription.failed` path.
+
 ## Configuration
 
 | Variable | Default | Description |
@@ -218,8 +251,11 @@ After `WEBHOOK_MAX_ATTEMPTS` (default **5**) failed attempts the delivery moves 
 | `WEBHOOK_BACKOFF_BASE_MS` | `5000` | Base delay (ms) for exponential backoff. |
 | `WEBHOOK_BACKOFF_CAP_MS` | `3600000` | Maximum backoff delay (ms); default 1 hour. |
 | `WEBHOOK_POLL_INTERVAL_MS` | `5000` | How often the background runner polls for due deliveries. |
+| `SUBSCRIPTION_MAX_ATTEMPTS` | `3` | Charge attempts before a subscription moves to `past_due` and emits `subscription.failed`. |
+| `SUBSCRIPTION_POLL_INTERVAL_MS` | `5000` | How often the subscription runner polls for due charges. |
+| `TESTMODE_SUB_INTERVAL_MS` | `3000` | Accelerated interval (ms) between charge cycles in test mode. |
 
-Invalid or non-positive values for the numeric webhook variables fall back to their defaults.
+Invalid or non-positive values for the numeric webhook and subscription variables fall back to their defaults.
 
 ## Rate limiting
 

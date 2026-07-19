@@ -65,6 +65,33 @@ export interface FiatReceiptParams {
   receipt?: string;
 }
 
+export type SubscriptionStatus = 'active' | 'past_due' | 'canceled';
+export type SubscriptionInterval = 'day' | 'week' | 'month';
+
+export interface Subscription {
+  id: string;
+  status: SubscriptionStatus;
+  from: string;
+  to: string;
+  amount: number;
+  asset: string;
+  interval: SubscriptionInterval;
+  payerRef: string | null;
+  nextChargeAt: string;
+  canceledAt: string | null;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CreateSubscriptionParams {
+  from: string;
+  to: string;
+  amount: number;
+  interval: SubscriptionInterval;
+  asset?: string;
+  payerRef?: string;
+}
+
 export interface ListingsResource {
   list(): Promise<{ listings: Listing[] }>;
   retrieve(id: string): Promise<{ listing: Listing }>;
@@ -83,16 +110,26 @@ export interface EscrowsResource {
   reportFiatPayment(id: string, params: FiatReceiptParams): Promise<{ escrow: Escrow }>;
 }
 
+export interface SubscriptionsResource {
+  create(params: CreateSubscriptionParams): Promise<{ subscription: Subscription }>;
+  retrieve(id: string): Promise<{ subscription: Subscription }>;
+  list(): Promise<{ subscriptions: Subscription[] }>;
+  cancel(id: string): Promise<{ subscription: Subscription }>;
+}
+
 export interface TestModeResource {
   forceDispute(escrowId: string, params?: { reason?: string }): Promise<{ escrow: Escrow }>;
   forceTimeout(escrowId: string): Promise<{ escrow: Escrow }>;
   forceRelease(escrowId: string): Promise<{ escrow: Escrow }>;
+  advanceSubscription(id: string): Promise<{ result: unknown }>;
+  failNextCharge(id: string): Promise<{ ok: boolean }>;
 }
 
 export interface PactoApiClient {
   readonly listings: ListingsResource;
   readonly quotes: QuotesResource;
   readonly escrows: EscrowsResource;
+  readonly subscriptions: SubscriptionsResource;
   readonly test: TestModeResource;
 }
 
@@ -162,6 +199,34 @@ export function createApiClient(options: HttpClientOptions): PactoApiClient {
           resource: 'escrow',
         }),
     },
+    subscriptions: {
+      create: (params) =>
+        request<{ subscription: Subscription }>(options, {
+          method: 'POST',
+          path: '/v1/subscriptions',
+          body: params,
+          idempotent: true,
+          resource: 'subscription',
+        }),
+      retrieve: (id) =>
+        request<{ subscription: Subscription }>(options, {
+          method: 'GET',
+          path: `/v1/subscriptions/${id}`,
+          resource: 'subscription',
+        }),
+      list: () =>
+        request<{ subscriptions: Subscription[] }>(options, {
+          method: 'GET',
+          path: '/v1/subscriptions',
+        }),
+      cancel: (id) =>
+        request<{ subscription: Subscription }>(options, {
+          method: 'POST',
+          path: `/v1/subscriptions/${id}/cancel`,
+          idempotent: true,
+          resource: 'subscription',
+        }),
+    },
     test: {
       forceDispute: (escrowId, params) =>
         request<{ escrow: Escrow }>(options, {
@@ -184,6 +249,18 @@ export function createApiClient(options: HttpClientOptions): PactoApiClient {
           path: `/v1/test/escrows/${escrowId}/release`,
           idempotent: true,
           resource: 'escrow',
+        }),
+      advanceSubscription: (id) =>
+        request<{ result: unknown }>(options, {
+          method: 'POST',
+          path: `/v1/test/subscriptions/${id}/advance`,
+          idempotent: true,
+        }),
+      failNextCharge: (id) =>
+        request<{ ok: boolean }>(options, {
+          method: 'POST',
+          path: `/v1/test/subscriptions/${id}/fail-next`,
+          idempotent: true,
         }),
     },
   };

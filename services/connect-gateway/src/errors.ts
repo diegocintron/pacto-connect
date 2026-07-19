@@ -40,6 +40,22 @@ export function quoteErrorStatus(code: QuoteErrorCode): ContentfulStatusCode {
   return code === 'quote_expired' ? 410 : 400;
 }
 
+export type SubscriptionErrorCode = 'subscription_invalid' | 'subscription_not_found';
+
+export class SubscriptionError extends Error {
+  constructor(
+    public readonly code: SubscriptionErrorCode,
+    message: string,
+  ) {
+    super(message);
+    this.name = 'SubscriptionError';
+  }
+}
+
+export function subscriptionErrorStatus(code: SubscriptionErrorCode): ContentfulStatusCode {
+  return code === 'subscription_not_found' ? 404 : 400;
+}
+
 export function toGatewayErrorBody(type: string, code: string, message: string): GatewayErrorBody {
   return {
     error: {
