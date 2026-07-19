@@ -44,6 +44,7 @@ export interface DispatchInput {
   type: WebhookEventType;
   data: Prisma.InputJsonValue;
   sourceEventId?: string;
+  merchantId?: string;
 }
 
 export interface DispatchResult {
@@ -68,12 +69,14 @@ export async function dispatchEvent(input: DispatchInput): Promise<DispatchResul
       type: input.type,
       data: input.data,
       sourceEventId: input.sourceEventId,
+      merchantId: input.merchantId ?? null,
     },
   });
 
   const endpoints = await prisma.webhookEndpoint.findMany({
     where: {
       apiKeyId: input.apiKeyId,
+      merchantId: input.merchantId ?? null,
       status: 'enabled',
       verified: true,
       enabledEvents: { has: input.type },

@@ -1,5 +1,6 @@
 import type { WebhookDeliveryStatus } from '@prisma/client';
 import { Hono } from 'hono';
+import { findActiveMerchant } from '../merchants.js';
 import { listDeadLetterDeliveries, listDeliveries, requeueDelivery } from '../webhooks/delivery.js';
 import {
   deleteEndpoint,
@@ -38,12 +39,14 @@ const webhooks = new Hono();
 
 webhooks.get('/', async (c) => {
   const apiKeyId = c.req.query('apiKeyId');
-  return c.json({ endpoints: await listEndpoints(apiKeyId) });
+  const merchantId = c.req.query('merchantId');
+  return c.json({ endpoints: await listEndpoints(apiKeyId, merchantId) });
 });
 
 webhooks.post('/', async (c) => {
   const body = await c.req.json<{
     apiKeyId?: string;
+    merchantId?: string;
     url?: string;
     enabledEvents?: string[];
     description?: string;
@@ -57,9 +60,20 @@ webhooks.post('/', async (c) => {
     return c.json({ error: 'url is required' }, 400);
   }
 
+  if (body.merchantId !== undefined) {
+    if (typeof body.merchantId !== 'string' || body.merchantId.length === 0) {
+      return c.json({ error: 'merchantId must be a non-empty string' }, 400);
+    }
+    const merchant = await findActiveMerchant(body.apiKeyId, body.merchantId);
+    if (!merchant) {
+      return c.json({ error: 'merchantId is unknown, disabled, or not owned by this key' }, 400);
+    }
+  }
+
   try {
     const endpoint = await registerEndpoint({
       apiKeyId: body.apiKeyId,
+      merchantId: body.merchantId,
       url: body.url,
       enabledEvents: body.enabledEvents ?? [],
       description: body.description,

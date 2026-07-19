@@ -2,8 +2,10 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('../webhooks/nonce.js', () => ({ consumeNonce: vi.fn(), releaseNonce: vi.fn() }));
 vi.mock('../webhooks/delivery.js', () => ({ dispatchEvent: vi.fn() }));
+vi.mock('../merchants.js', () => ({ findActiveMerchant: vi.fn() }));
 
 import { Hono } from 'hono';
+import { findActiveMerchant } from '../merchants.js';
 import { dispatchEvent } from '../webhooks/delivery.js';
 import { consumeNonce, releaseNonce } from '../webhooks/nonce.js';
 import { signPayload, WEBHOOK_SIGNATURE_HEADER } from '../webhooks/signature.js';
@@ -42,6 +44,7 @@ describe('inbound webhook receiver', () => {
     vi.mocked(consumeNonce).mockReset();
     vi.mocked(dispatchEvent).mockReset();
     vi.mocked(releaseNonce).mockReset();
+    vi.mocked(findActiveMerchant).mockReset();
     vi.useFakeTimers();
     vi.setSystemTime(NOW * 1000);
   });
@@ -63,6 +66,51 @@ describe('inbound webhook receiver', () => {
       data: { escrowId: 'esc_1' },
       sourceEventId: 'up_evt_1',
     });
+  });
+
+  it('accepts a valid signed event with a merchantId and dispatches it scoped to the merchant', async () => {
+    vi.mocked(consumeNonce).mockResolvedValue(true);
+    vi.mocked(findActiveMerchant).mockResolvedValue({ id: 'mrc_1' } as never);
+    vi.mocked(dispatchEvent).mockResolvedValue({ eventId: 'evt_1', deliveries: 1 });
+
+    const bodyWithMerchant = JSON.stringify({
+      id: 'up_evt_1',
+      apiKeyId: 'key_1',
+      type: 'escrow.created',
+      data: { escrowId: 'esc_1' },
+      merchantId: 'mrc_1',
+    });
+
+    const res = await buildApp().request('/v1/webhooks/inbound', signedRequest(bodyWithMerchant));
+
+    expect(res.status).toBe(200);
+    expect(findActiveMerchant).toHaveBeenCalledWith('key_1', 'mrc_1');
+    expect(dispatchEvent).toHaveBeenCalledWith({
+      apiKeyId: 'key_1',
+      type: 'escrow.created',
+      data: { escrowId: 'esc_1' },
+      sourceEventId: 'up_evt_1',
+      merchantId: 'mrc_1',
+    });
+  });
+
+  it('rejects a merchantId that findActiveMerchant cannot resolve', async () => {
+    vi.mocked(consumeNonce).mockResolvedValue(true);
+    vi.mocked(findActiveMerchant).mockResolvedValue(null);
+
+    const bodyWithMerchant = JSON.stringify({
+      id: 'up_evt_1',
+      apiKeyId: 'key_1',
+      type: 'escrow.created',
+      data: { escrowId: 'esc_1' },
+      merchantId: 'mrc_unknown',
+    });
+
+    const res = await buildApp().request('/v1/webhooks/inbound', signedRequest(bodyWithMerchant));
+
+    expect(res.status).toBe(400);
+    expect((await res.json()).error.code).toBe('invalid_payload');
+    expect(dispatchEvent).not.toHaveBeenCalled();
   });
 
   it('rejects and logs a payload whose timestamp is outside tolerance', async () => {

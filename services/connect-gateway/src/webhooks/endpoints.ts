@@ -12,6 +12,7 @@ export function generateWebhookSecret(): string {
 
 export interface RegisterEndpointInput {
   apiKeyId: string;
+  merchantId?: string;
   url: string;
   enabledEvents: string[];
   description?: string;
@@ -20,6 +21,7 @@ export interface RegisterEndpointInput {
 export interface WebhookEndpointPublic {
   id: string;
   apiKeyId: string;
+  merchantId: string | null;
   url: string;
   enabledEvents: string[];
   status: WebhookStatus;
@@ -44,6 +46,7 @@ function toPublic(record: WebhookEndpoint): WebhookEndpointPublic {
   return {
     id: record.id,
     apiKeyId: record.apiKeyId,
+    merchantId: record.merchantId,
     url: record.url,
     enabledEvents: record.enabledEvents,
     status: record.status,
@@ -87,6 +90,7 @@ export async function registerEndpoint(
   const record = await prisma.webhookEndpoint.create({
     data: {
       apiKeyId: input.apiKeyId,
+      merchantId: input.merchantId ?? null,
       url: input.url,
       secret,
       enabledEvents: input.enabledEvents,
@@ -100,9 +104,20 @@ export async function registerEndpoint(
   };
 }
 
-export async function listEndpoints(apiKeyId?: string): Promise<WebhookEndpointPublic[]> {
+export async function listEndpoints(
+  apiKeyId?: string,
+  merchantId?: string,
+): Promise<WebhookEndpointPublic[]> {
+  const where: { apiKeyId?: string; merchantId?: string } = {};
+  if (apiKeyId) {
+    where.apiKeyId = apiKeyId;
+  }
+  if (merchantId) {
+    where.merchantId = merchantId;
+  }
+
   const records = await prisma.webhookEndpoint.findMany({
-    where: apiKeyId ? { apiKeyId } : undefined,
+    where: Object.keys(where).length > 0 ? where : undefined,
     orderBy: { createdAt: 'desc' },
   });
 

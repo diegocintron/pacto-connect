@@ -48,7 +48,13 @@ export async function chargeSubscription(subscriptionId: string): Promise<Charge
 
   // Simulated charge failure (test-mode directive).
   if (sub.failNextCharge) {
-    return failCharge(sub.id, sub.apiKeyId, sub.attemptCount, 'insufficient_funds');
+    return failCharge(
+      sub.id,
+      sub.apiKeyId,
+      sub.attemptCount,
+      'insufficient_funds',
+      sub.merchantId ?? undefined,
+    );
   }
 
   const apiKey = await prisma.apiKey.findUnique({ where: { id: sub.apiKeyId } });
@@ -106,18 +112,22 @@ export async function chargeSubscription(subscriptionId: string): Promise<Charge
     chargedQuoteId = quote.quoteId;
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'charge_error';
-    return failCharge(sub.id, sub.apiKeyId, sub.attemptCount, reason);
+    return failCharge(sub.id, sub.apiKeyId, sub.attemptCount, reason, sub.merchantId ?? undefined);
   }
 
   // Charge is committed. Emit AFTER the try so a webhook-dispatch failure cannot
   // roll the subscription into a bogus failed charge / double-charge next tick.
-  await emitSubscriptionCharged(sub.apiKeyId, {
-    subscriptionId: sub.id,
-    escrowId,
-    amount: chargedAmount,
-    asset: sub.asset,
-    quoteId: chargedQuoteId,
-  });
+  await emitSubscriptionCharged(
+    sub.apiKeyId,
+    {
+      subscriptionId: sub.id,
+      escrowId,
+      amount: chargedAmount,
+      asset: sub.asset,
+      quoteId: chargedQuoteId,
+    },
+    sub.merchantId ?? undefined,
+  );
 
   return {
     subscriptionId: sub.id,
@@ -132,6 +142,7 @@ async function failCharge(
   apiKeyId: string,
   previousAttempts: number,
   reason: string,
+  merchantId?: string,
 ): Promise<ChargeResult> {
   const attempt = previousAttempts + 1;
   const maxAttempts = getMaxAttempts();
@@ -163,11 +174,15 @@ async function failCharge(
   });
 
   if (exhausted) {
-    await emitSubscriptionFailed(apiKeyId, {
-      subscriptionId,
-      reason,
-      attempts: attempt,
-    });
+    await emitSubscriptionFailed(
+      apiKeyId,
+      {
+        subscriptionId,
+        reason,
+        attempts: attempt,
+      },
+      merchantId,
+    );
   }
 
   return { subscriptionId, status: 'failed', subscriptionStatus: status };

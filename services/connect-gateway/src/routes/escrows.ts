@@ -187,6 +187,7 @@ escrows.post('/', idempotency(), async (c) => {
     quoteId: body.quoteId,
     amount: typeof body.amount === 'string' ? body.amount : '100',
     asset: typeof body.asset === 'string' ? body.asset : 'USDC',
+    merchantId: session.merchantId ?? undefined,
   });
 
   return c.json({ escrow: serializeEscrow(escrow) });

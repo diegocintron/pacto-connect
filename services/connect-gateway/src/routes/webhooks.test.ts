@@ -32,6 +32,8 @@ vi.mock('../db.js', () => ({
   prisma: {},
 }));
 
+vi.mock('../merchants.js', () => ({ findActiveMerchant: vi.fn() }));
+
 vi.mock('../keys.js', () => ({
   findActiveApiKeyByPublishableKey: vi.fn(),
   isOriginAllowed: (origin: string, allowed: string[]) => allowed.includes(origin),
@@ -43,6 +45,7 @@ vi.mock('../keys.js', () => ({
   generateKeyPair: vi.fn(),
 }));
 
+import { findActiveMerchant } from '../merchants.js';
 import * as delivery from '../webhooks/delivery.js';
 import * as endpoints from '../webhooks/endpoints.js';
 
@@ -53,6 +56,7 @@ describe('admin webhook routes', () => {
     vi.mocked(endpoints.verifyEndpoint).mockReset();
     vi.mocked(delivery.listDeadLetterDeliveries).mockReset();
     vi.mocked(delivery.requeueDelivery).mockReset();
+    vi.mocked(findActiveMerchant).mockReset();
   });
 
   it('rejects webhook admin requests without token', async () => {
@@ -81,6 +85,7 @@ describe('admin webhook routes', () => {
     vi.mocked(endpoints.registerEndpoint).mockResolvedValue({
       id: 'wh_1',
       apiKeyId: 'key_1',
+      merchantId: null,
       url: 'https://example.com/webhook',
       enabledEvents: ['checkout.session.created'],
       status: 'enabled',
@@ -132,6 +137,92 @@ describe('admin webhook routes', () => {
     expect(await res.json()).toEqual({
       error: 'enabledEvents must be a non-empty array',
     });
+  });
+
+  it('returns 400 when merchantId is not a non-empty string', async () => {
+    const app = createApp();
+    const res = await app.request('/admin/webhooks', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer test-admin-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        apiKeyId: 'key_1',
+        url: 'https://example.com/webhook',
+        merchantId: '',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({ error: 'merchantId must be a non-empty string' });
+    expect(findActiveMerchant).not.toHaveBeenCalled();
+    expect(endpoints.registerEndpoint).not.toHaveBeenCalled();
+  });
+
+  it('returns 400 when merchantId is unknown, disabled, or not owned by the key', async () => {
+    vi.mocked(findActiveMerchant).mockResolvedValue(null);
+
+    const app = createApp();
+    const res = await app.request('/admin/webhooks', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer test-admin-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        apiKeyId: 'key_1',
+        url: 'https://example.com/webhook',
+        merchantId: 'mrc_x',
+      }),
+    });
+
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      error: 'merchantId is unknown, disabled, or not owned by this key',
+    });
+    expect(findActiveMerchant).toHaveBeenCalledWith('key_1', 'mrc_x');
+    expect(endpoints.registerEndpoint).not.toHaveBeenCalled();
+  });
+
+  it('creates a webhook endpoint scoped to a valid merchantId', async () => {
+    vi.mocked(findActiveMerchant).mockResolvedValue({ id: 'mrc_1' } as never);
+    vi.mocked(endpoints.registerEndpoint).mockResolvedValue({
+      id: 'wh_1',
+      apiKeyId: 'key_1',
+      merchantId: 'mrc_1',
+      url: 'https://example.com/webhook',
+      enabledEvents: ['checkout.session.created'],
+      status: 'enabled',
+      verified: false,
+      description: null,
+      createdAt: new Date('2024-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+      secret: 'whsec_testsecret',
+    });
+
+    const app = createApp();
+    const res = await app.request('/admin/webhooks', {
+      method: 'POST',
+      headers: {
+        Authorization: 'Bearer test-admin-token',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({
+        apiKeyId: 'key_1',
+        url: 'https://example.com/webhook',
+        enabledEvents: ['checkout.session.created'],
+        merchantId: 'mrc_1',
+      }),
+    });
+
+    expect(res.status).toBe(201);
+    const body = await res.json();
+    expect(body.endpoint.merchantId).toBe('mrc_1');
+    expect(findActiveMerchant).toHaveBeenCalledWith('key_1', 'mrc_1');
+    expect(endpoints.registerEndpoint).toHaveBeenCalledWith(
+      expect.objectContaining({ merchantId: 'mrc_1' }),
+    );
   });
 
   it('lists dead-letter deliveries', async () => {

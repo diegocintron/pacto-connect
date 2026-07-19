@@ -106,6 +106,7 @@ describe('test control routes', () => {
       refreshCount: 0,
       createdAt: new Date('2024-06-01T12:00:00.000Z'),
       updatedAt: new Date('2024-06-01T12:00:00.000Z'),
+      merchantId: null,
     };
 
     vi.mocked(keys.findActiveApiKeyByPublishableKey).mockReset();
@@ -211,6 +212,7 @@ describe('subscription test controls', () => {
       refreshCount: 0,
       createdAt: new Date('2024-06-01T12:00:00.000Z'),
       updatedAt: new Date('2024-06-01T12:00:00.000Z'),
+      merchantId: null,
     };
 
     vi.mocked(keys.findActiveApiKeyByPublishableKey).mockReset();
