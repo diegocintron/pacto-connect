@@ -146,6 +146,7 @@ describe('subscription routes', () => {
     expect(emitSubscriptionCreated).toHaveBeenCalledWith(
       'key_1',
       expect.objectContaining({ subscriptionId: 'sub_1' }),
+      undefined,
     );
     expect(emitSubscriptionCreated).toHaveBeenCalledTimes(1);
   });
@@ -232,6 +233,7 @@ describe('subscription routes', () => {
     expect(emitSubscriptionCanceled).toHaveBeenCalledWith(
       'key_1',
       expect.objectContaining({ subscriptionId: 'sub_1' }),
+      undefined,
     );
     expect(emitSubscriptionCanceled).toHaveBeenCalledTimes(1);
   });

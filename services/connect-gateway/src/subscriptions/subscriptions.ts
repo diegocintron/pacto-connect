@@ -39,6 +39,7 @@ export interface CreateSubscriptionInput {
   interval: string;
   asset?: string;
   payerRef?: string;
+  merchantId?: string;
 }
 
 export async function createSubscription(input: CreateSubscriptionInput): Promise<Subscription> {
@@ -67,6 +68,7 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
       asset: input.asset ?? 'USDC',
       interval: input.interval,
       nextChargeAt,
+      merchantId: input.merchantId ?? null,
     },
   });
 }
