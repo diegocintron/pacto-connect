@@ -8,7 +8,7 @@ export interface GatewayErrorBody {
 
 export interface ErrorContext {
   path: string;
-  resource?: 'escrow' | 'quote' | 'listing';
+  resource?: 'escrow' | 'quote' | 'listing' | 'subscription';
 }
 
 export class PactoError extends Error {
