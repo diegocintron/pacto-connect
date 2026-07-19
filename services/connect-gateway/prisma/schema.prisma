@@ -47,6 +47,17 @@ enum IdempotencyStatus {
   completed
 }
 
+enum SubscriptionStatus {
+  active
+  past_due
+  canceled
+}
+
+enum SubscriptionChargeStatus {
+  succeeded
+  failed
+}
+
 model ApiKey {
   id             String           @id @default(cuid())
   publishableKey String           @unique
@@ -62,6 +73,7 @@ model ApiKey {
   checkoutSessions   CheckoutSession[]
   webhookEndpoints   WebhookEndpoint[]
   webhookEvents      WebhookEvent[]
+  subscriptions      Subscription[]
 
   @@index([publishableKey])
   @@index([status])
@@ -115,6 +127,44 @@ model WebhookEvent {
 
   @@index([apiKeyId])
   @@index([type])
+}
+
+model Subscription {
+  id             String              @id @default(cuid())
+  apiKeyId       String
+  apiKey         ApiKey              @relation(fields: [apiKeyId], references: [id])
+  sessionId      String
+  payerRef       String?
+  from           String
+  to             String
+  amount         Float
+  asset          String              @default("USDC")
+  interval       String
+  status         SubscriptionStatus  @default(active)
+  attemptCount   Int                 @default(0)
+  failNextCharge Boolean             @default(false)
+  nextChargeAt   DateTime
+  canceledAt     DateTime?
+  createdAt      DateTime            @default(now())
+  updatedAt      DateTime            @updatedAt
+  charges        SubscriptionCharge[]
+
+  @@index([apiKeyId])
+  @@index([status, nextChargeAt])
+}
+
+model SubscriptionCharge {
+  id             String                   @id @default(cuid())
+  subscriptionId String
+  subscription   Subscription             @relation(fields: [subscriptionId], references: [id])
+  status         SubscriptionChargeStatus
+  quote          Json
+  escrowId       String?
+  failureReason  String?
+  attempt        Int
+  createdAt      DateTime                 @default(now())
+
+  @@index([subscriptionId])
 }
 
 model WebhookDelivery {
