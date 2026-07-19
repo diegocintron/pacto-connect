@@ -82,6 +82,18 @@ describe('chargeSubscription', () => {
     expect(emitSubscriptionFailed).not.toHaveBeenCalled();
   });
 
+  it('a webhook emit failure after a committed charge does not record a failed charge or reschedule', async () => {
+    vi.mocked(prisma.subscription.findUnique).mockResolvedValue(buildSub());
+    vi.mocked(emitSubscriptionCharged).mockRejectedValueOnce(new Error('dispatch boom'));
+
+    await expect(chargeSubscription('sub_1')).rejects.toThrow('dispatch boom');
+
+    // exactly one charge row, and it is the succeeded one — never a failed one
+    expect(prisma.subscriptionCharge.create).toHaveBeenCalledTimes(1);
+    const charge = vi.mocked(prisma.subscriptionCharge.create).mock.calls[0]![0];
+    expect(charge.data.status).toBe('succeeded');
+  });
+
   it('failNextCharge: records a failed charge and retries while under the cap (stays active)', async () => {
     vi.mocked(prisma.subscription.findUnique).mockResolvedValue(
       buildSub({ failNextCharge: true, attemptCount: 0 }),

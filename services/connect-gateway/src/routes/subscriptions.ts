@@ -147,16 +147,19 @@ subscriptions.post('/:id/cancel', async (c) => {
     return liveNotImplemented(c);
   }
 
-  const sub = await cancelSubscription(c.req.param('id'), apiKey.id, session.id);
-  if (!sub) {
+  const result = await cancelSubscription(c.req.param('id'), apiKey.id, session.id);
+  if (!result) {
     return c.json(
       toGatewayErrorBody('subscription_error', 'subscription_not_found', 'Subscription not found'),
       404,
     );
   }
 
-  await emitSubscriptionCanceled(apiKey.id, { subscriptionId: sub.id });
-  return c.json({ subscription: serializeSubscription(sub) });
+  if (result.transitioned) {
+    await emitSubscriptionCanceled(apiKey.id, { subscriptionId: result.subscription.id });
+  }
+
+  return c.json({ subscription: serializeSubscription(result.subscription) });
 });
 
 export { subscriptions as subscriptionRoutes };

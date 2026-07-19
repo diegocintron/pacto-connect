@@ -233,4 +233,20 @@ describe('subscription routes', () => {
     );
     expect(emitSubscriptionCanceled).toHaveBeenCalledTimes(1);
   });
+
+  it('POST /v1/subscriptions/:id/cancel on an already-canceled subscription returns 200 but does not emit', async () => {
+    vi.mocked(prisma.subscription.findFirst).mockResolvedValue(
+      buildSub({ status: 'canceled', canceledAt: now }),
+    );
+    const app = createApp();
+    const res = await app.request('/v1/subscriptions/sub_1/cancel', {
+      method: 'POST',
+      headers: headers(),
+    });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { subscription: { status: string } };
+    expect(body.subscription.status).toBe('canceled');
+    expect(emitSubscriptionCanceled).not.toHaveBeenCalled();
+    expect(prisma.subscription.update).not.toHaveBeenCalled();
+  });
 });

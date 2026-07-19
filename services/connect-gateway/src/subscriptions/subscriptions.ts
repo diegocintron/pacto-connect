@@ -89,24 +89,30 @@ export async function listSubscriptions(
   });
 }
 
+export interface CancelSubscriptionResult {
+  subscription: Subscription;
+  transitioned: boolean;
+}
+
 export async function cancelSubscription(
   id: string,
   apiKeyId: string,
   sessionId: string,
-): Promise<Subscription | null> {
+): Promise<CancelSubscriptionResult | null> {
   const existing = await prisma.subscription.findFirst({ where: { id, apiKeyId, sessionId } });
   if (!existing) {
     return null;
   }
 
   if (existing.status === 'canceled') {
-    return existing;
+    return { subscription: existing, transitioned: false };
   }
 
-  return prisma.subscription.update({
+  const updated = await prisma.subscription.update({
     where: { id },
     data: { status: 'canceled', canceledAt: new Date() },
   });
+  return { subscription: updated, transitioned: true };
 }
 
 export type { FxCurrency };

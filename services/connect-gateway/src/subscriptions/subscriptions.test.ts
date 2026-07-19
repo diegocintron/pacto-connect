@@ -119,7 +119,8 @@ describe('subscription domain', () => {
 
     const result = await cancelSubscription('sub_1', 'key_1', 'session_1');
 
-    expect(result?.status).toBe('canceled');
+    expect(result?.subscription.status).toBe('canceled');
+    expect(result?.transitioned).toBe(true);
     const findArgs = vi.mocked(prisma.subscription.findFirst).mock.calls[0]![0];
     expect(findArgs?.where).toEqual(
       expect.objectContaining({ id: 'sub_1', apiKeyId: 'key_1', sessionId: 'session_1' }),
@@ -132,5 +133,16 @@ describe('subscription domain', () => {
   it('cancelSubscription returns null when not found', async () => {
     vi.mocked(prisma.subscription.findFirst).mockResolvedValue(null);
     expect(await cancelSubscription('missing', 'key_1', 'session_1')).toBeNull();
+  });
+
+  it('cancelSubscription is idempotent: an already-canceled subscription returns transitioned=false and does not call update', async () => {
+    const alreadyCanceled = buildSub({ status: 'canceled', canceledAt: now });
+    vi.mocked(prisma.subscription.findFirst).mockResolvedValue(alreadyCanceled);
+
+    const result = await cancelSubscription('sub_1', 'key_1', 'session_1');
+
+    expect(result?.transitioned).toBe(false);
+    expect(result?.subscription.status).toBe('canceled');
+    expect(prisma.subscription.update).not.toHaveBeenCalled();
   });
 });

@@ -54,6 +54,9 @@ export async function chargeSubscription(subscriptionId: string): Promise<Charge
   const apiKey = await prisma.apiKey.findUnique({ where: { id: sub.apiKeyId } });
   const spreadBps = apiKey?.quoteSpreadBps ?? 0;
 
+  let escrowId: string;
+  let chargedAmount: number;
+  let chargedQuoteId: string;
   try {
     // Reuse the #18 quote engine to re-price FX at charge time.
     const quote = createQuote({
@@ -98,24 +101,30 @@ export async function chargeSubscription(subscriptionId: string): Promise<Charge
       },
     });
 
-    await emitSubscriptionCharged(sub.apiKeyId, {
-      subscriptionId: sub.id,
-      escrowId: escrow.id,
-      amount: quote.toAmount,
-      asset: sub.asset,
-      quoteId: quote.quoteId,
-    });
-
-    return {
-      subscriptionId: sub.id,
-      status: 'succeeded',
-      escrowId: escrow.id,
-      subscriptionStatus: 'active',
-    };
+    escrowId = escrow.id;
+    chargedAmount = quote.toAmount;
+    chargedQuoteId = quote.quoteId;
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'charge_error';
     return failCharge(sub.id, sub.apiKeyId, sub.attemptCount, reason);
   }
+
+  // Charge is committed. Emit AFTER the try so a webhook-dispatch failure cannot
+  // roll the subscription into a bogus failed charge / double-charge next tick.
+  await emitSubscriptionCharged(sub.apiKeyId, {
+    subscriptionId: sub.id,
+    escrowId,
+    amount: chargedAmount,
+    asset: sub.asset,
+    quoteId: chargedQuoteId,
+  });
+
+  return {
+    subscriptionId: sub.id,
+    status: 'succeeded',
+    escrowId,
+    subscriptionStatus: 'active',
+  };
 }
 
 async function failCharge(
