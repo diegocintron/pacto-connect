@@ -8,8 +8,8 @@ export interface VerifyOptions {
   nowSeconds?: number;
 }
 
-function buildSignedPayload(timestampSeconds: number, body: string): string {
-  return `${timestampSeconds}.${body}`;
+function buildSignedPayload(timestampSeconds: number, body: string, nonce?: string): string {
+  return nonce ? `${timestampSeconds}.${nonce}.${body}` : `${timestampSeconds}.${body}`;
 }
 
 function computeSignature(signedPayload: string, secret: string): string {
@@ -27,18 +27,24 @@ function signaturesMatch(provided: string, expected: string): boolean {
   return timingSafeEqual(providedBuffer, expectedBuffer);
 }
 
-export function signPayload(body: string, secret: string, timestampSeconds?: number): string {
+export function signPayload(
+  body: string,
+  secret: string,
+  timestampSeconds?: number,
+  nonce?: string,
+): string {
   const timestamp = timestampSeconds ?? Math.floor(Date.now() / 1000);
-  const signedPayload = buildSignedPayload(timestamp, body);
+  const signedPayload = buildSignedPayload(timestamp, body, nonce);
   const signature = computeSignature(signedPayload, secret);
-  return `t=${timestamp},v1=${signature}`;
+  return nonce ? `t=${timestamp},n=${nonce},v1=${signature}` : `t=${timestamp},v1=${signature}`;
 }
 
 export function parseSignatureHeader(
   header: string,
-): { timestamp: number; signature: string } | null {
+): { timestamp: number; signature: string; nonce?: string } | null {
   let timestamp: number | undefined;
   let signature: string | undefined;
+  let nonce: string | undefined;
 
   for (const part of header.split(',')) {
     const trimmed = part.trim();
@@ -58,6 +64,8 @@ export function parseSignatureHeader(
       timestamp = parsed;
     } else if (key === 'v1') {
       signature = value;
+    } else if (key === 'n') {
+      nonce = value;
     }
   }
 
@@ -65,7 +73,7 @@ export function parseSignatureHeader(
     return null;
   }
 
-  return { timestamp, signature };
+  return nonce === undefined ? { timestamp, signature } : { timestamp, signature, nonce };
 }
 
 export function verifySignature(
@@ -87,7 +95,7 @@ export function verifySignature(
     }
   }
 
-  const signedPayload = buildSignedPayload(parsed.timestamp, body);
+  const signedPayload = buildSignedPayload(parsed.timestamp, body, parsed.nonce);
   const expectedSignature = computeSignature(signedPayload, secret);
 
   return signaturesMatch(parsed.signature, expectedSignature);

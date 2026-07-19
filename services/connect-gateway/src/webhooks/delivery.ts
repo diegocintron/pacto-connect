@@ -43,19 +43,31 @@ export interface DispatchInput {
   apiKeyId: string;
   type: WebhookEventType;
   data: Prisma.InputJsonValue;
+  sourceEventId?: string;
 }
 
 export interface DispatchResult {
   eventId: string;
   deliveries: number;
+  deduped?: boolean;
 }
 
 export async function dispatchEvent(input: DispatchInput): Promise<DispatchResult> {
+  if (input.sourceEventId) {
+    const existing = await prisma.webhookEvent.findUnique({
+      where: { sourceEventId: input.sourceEventId },
+    });
+    if (existing) {
+      return { eventId: existing.id, deliveries: 0, deduped: true };
+    }
+  }
+
   const event = await prisma.webhookEvent.create({
     data: {
       apiKeyId: input.apiKeyId,
       type: input.type,
       data: input.data,
+      sourceEventId: input.sourceEventId,
     },
   });
 

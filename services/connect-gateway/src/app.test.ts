@@ -307,3 +307,37 @@ describe('keys service hashing', () => {
     expect(hash).toHaveLength(64);
   });
 });
+
+describe('rate limiting', () => {
+  beforeEach(() => {
+    process.env.GATEWAY_SIGNING_SECRET = 'test-signing-secret';
+    process.env.RATE_LIMIT_WINDOW_MS = '60000';
+    process.env.RATE_LIMIT_MAX = '2';
+    vi.mocked(keys.findActiveApiKeyByPublishableKey).mockReset();
+    vi.mocked(keys.findActiveApiKeyByPublishableKey).mockResolvedValue(mockApiKey);
+  });
+
+  it('returns 429 with Retry-After once the per-key limit is exceeded', async () => {
+    const app = createApp();
+    const headers = {
+      Origin: 'https://allowed.example',
+      [PUBLISHABLE_KEY_HEADER]: mockApiKey.publishableKey,
+      'Content-Type': 'application/json',
+    };
+    const send = () =>
+      app.request('/v1/quote', {
+        method: 'POST',
+        headers,
+        body: JSON.stringify({ from: 'USD', to: 'CRC', amount: 100 }),
+      });
+
+    expect((await send()).status).toBe(200);
+    expect((await send()).status).toBe(200);
+
+    const limited = await send();
+    expect(limited.status).toBe(429);
+    expect(limited.headers.get('Retry-After')).toBeTruthy();
+    const body = await limited.json();
+    expect(body.error.code).toBe('too_many_requests');
+  });
+});

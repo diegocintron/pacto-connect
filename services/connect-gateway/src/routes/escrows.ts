@@ -3,6 +3,7 @@ import type { Context } from 'hono';
 import { Hono } from 'hono';
 import { streamSSE } from 'hono/streaming';
 import { SessionError, sessionErrorStatus, toGatewayErrorBody } from '../errors.js';
+import { idempotency } from '../middleware/idempotency.js';
 import { validateClientSecret } from '../sessions.js';
 import {
   getSimulator,
@@ -159,7 +160,7 @@ escrows.get('/events', async (c) => {
   });
 });
 
-escrows.post('/', async (c) => {
+escrows.post('/', idempotency(), async (c) => {
   const auth = await authenticateEscrowRequest(c);
   if ('error' in auth) {
     return auth.error;

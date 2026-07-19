@@ -19,6 +19,7 @@ const mockEvent = {
   apiKeyId: 'key_1',
   type: 'escrow.created',
   data: { escrowId: 'esc_1' },
+  sourceEventId: null,
   createdAt: new Date('2024-06-01T12:00:00.000Z'),
 };
 
@@ -51,6 +52,7 @@ vi.mock('../db.js', () => ({
   prisma: {
     webhookEvent: {
       create: vi.fn(),
+      findUnique: vi.fn(),
     },
     webhookEndpoint: {
       findMany: vi.fn(),
@@ -290,5 +292,26 @@ describe('webhook delivery engine', () => {
     });
     expect(result?.status).toBe('pending');
     expect(result?.maxAttempts).toBeGreaterThan(deadDelivery.attempts);
+  });
+});
+
+describe('dispatchEvent source-event dedup', () => {
+  beforeEach(() => {
+    vi.mocked(prisma.webhookEvent.findUnique).mockReset?.();
+    vi.mocked(prisma.webhookEvent.create).mockReset?.();
+  });
+
+  it('does not re-create or re-dispatch when the sourceEventId was already seen', async () => {
+    vi.mocked(prisma.webhookEvent.findUnique).mockResolvedValue({ id: 'evt_existing' } as never);
+
+    const result = await dispatchEvent({
+      apiKeyId: 'key_1',
+      type: 'escrow.created',
+      data: {},
+      sourceEventId: 'up_evt_1',
+    });
+
+    expect(result).toEqual({ eventId: 'evt_existing', deliveries: 0, deduped: true });
+    expect(prisma.webhookEvent.create).not.toHaveBeenCalled();
   });
 });

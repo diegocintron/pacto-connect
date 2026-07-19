@@ -67,3 +67,25 @@ describe('webhook signature', () => {
     expect(verifySignature(body, 'not-a-sig', secret, { nowSeconds: timestamp })).toBe(false);
   });
 });
+
+describe('webhook signature with nonce', () => {
+  const body = '{"event":"test"}';
+  const secret = 'whsec_test_secret';
+  const timestamp = 1_700_000_000;
+  const nonce = 'nonce_abc123';
+
+  it('signs and verifies a payload carrying a nonce', () => {
+    const header = signPayload(body, secret, timestamp, nonce);
+    expect(header).toContain(`n=${nonce}`);
+
+    const parsed = parseSignatureHeader(header);
+    expect(parsed?.nonce).toBe(nonce);
+    expect(verifySignature(body, header, secret, { nowSeconds: timestamp })).toBe(true);
+  });
+
+  it('fails verification when the nonce in the header is tampered', () => {
+    const header = signPayload(body, secret, timestamp, nonce);
+    const tampered = header.replace(`n=${nonce}`, 'n=nonce_evil');
+    expect(verifySignature(body, tampered, secret, { nowSeconds: timestamp })).toBe(false);
+  });
+});

@@ -1,6 +1,7 @@
 import type { ApiKey, CheckoutMode, Prisma } from '@prisma/client';
 import { Hono } from 'hono';
 import { SessionError, sessionErrorStatus, toGatewayErrorBody } from '../errors.js';
+import { idempotency } from '../middleware/idempotency.js';
 import { createCheckoutSession, refreshCheckoutSession } from '../sessions.js';
 
 type SessionRouteVariables = {
@@ -13,7 +14,7 @@ function isCheckoutMode(value: string): value is CheckoutMode {
   return value === 'buy' || value === 'sell';
 }
 
-session.post('/', async (c) => {
+session.post('/', idempotency(), async (c) => {
   const apiKey = c.get('apiKey');
   const body = await c.req.json<{
     listingId?: string;

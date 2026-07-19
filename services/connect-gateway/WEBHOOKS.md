@@ -220,3 +220,106 @@ After `WEBHOOK_MAX_ATTEMPTS` (default **5**) failed attempts the delivery moves 
 | `WEBHOOK_POLL_INTERVAL_MS` | `5000` | How often the background runner polls for due deliveries. |
 
 Invalid or non-positive values for the numeric webhook variables fall back to their defaults.
+
+## Rate limiting
+
+Every public `/v1/*` route (`/v1/session`, `/v1/escrows`, `/v1/quote`, `/v1/test`) is protected by an in-memory sliding-window rate limiter, keyed per publishable API key. `/health`, `/admin/*`, and the inbound webhook receiver below are not rate limited by this layer.
+
+When a key exceeds its limit, the gateway responds:
+
+**Response `429`**
+
+```http
+Retry-After: 42
+```
+
+```json
+{ "error": { "type": "rate_limit_error", "code": "too_many_requests", "message": "rate limit exceeded" } }
+```
+
+`Retry-After` is in seconds and indicates how long until the oldest request in the current window ages out.
+
+**Configuration**
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `RATE_LIMIT_WINDOW_MS` | `60000` | Sliding window size, in milliseconds. |
+| `RATE_LIMIT_MAX` | `60` | Maximum requests per key within the window. |
+
+Invalid or non-positive values fall back to their defaults. The limiter state is in-memory per gateway process; it does not persist across restarts or synchronize across multiple instances.
+
+## Inbound webhooks (Pacto → gateway)
+
+The gateway also **receives** webhooks from the upstream Pacto P2P API at:
+
+### `POST /v1/webhooks/inbound`
+
+This endpoint is unauthenticated by API key — instead, every request must carry a signed `Pacto-Signature` header:
+
+```http
+Pacto-Signature: t=<unixSeconds>,n=<nonce>,v1=<hexHmac>
+```
+
+The signed payload is the string `${t}.${n}.${rawRequestBody}` (timestamp, dot, nonce, dot, raw body bytes), HMAC-SHA256'd with `PACTO_WEBHOOK_SECRET` and compared to `v1` using a timing-safe equality check — the same shape as outbound delivery signing above, with a nonce added for inbound replay protection.
+
+Verification rejects a request when:
+
+1. The timestamp `t` falls outside the tolerance window (`WEBHOOK_REPLAY_TOLERANCE_SECONDS`, default **300** seconds) of the current time.
+2. The recomputed HMAC does not match `v1`.
+3. The nonce `n` has already been used (replay).
+
+**Response `400`** — malformed/missing signature, bad or stale signature, missing nonce, or an invalid JSON payload:
+
+```json
+{ "error": { "type": "webhook_error", "code": "signature_invalid", "message": "signature invalid or replay outside tolerance" } }
+```
+
+(Bad HMAC and an out-of-tolerance timestamp intentionally return the same generic `signature_invalid` error, so a caller can't distinguish which check failed.)
+
+**Response `409`** — the nonce was already consumed by a prior request:
+
+```json
+{ "error": { "type": "webhook_error", "code": "replay_detected", "message": "nonce already used" } }
+```
+
+**Response `500`** — `PACTO_WEBHOOK_SECRET` is not configured, or event dispatch failed after a valid signature.
+
+**Response `200`** — accepted: `{ "received": true, "eventId": "…", "deduped": <boolean> }`. `deduped: true` means an event with the same source event id was already processed and no new side effects were applied.
+
+**Configuration**
+
+| Variable | Default | Description |
+| --- | --- | --- |
+| `PACTO_WEBHOOK_SECRET` | — | **Required.** Shared secret used to verify signatures on inbound requests from Pacto. |
+| `WEBHOOK_REPLAY_TOLERANCE_SECONDS` | `300` | Timestamp tolerance window for inbound signatures, in seconds. |
+
+## Idempotent requests
+
+`POST /v1/session` and `POST /v1/escrows` accept an optional `Idempotency-Key` header so retried requests (network errors, client timeouts, at-least-once retries) don't create duplicate sessions or escrows.
+
+Send the same `Idempotency-Key` on a retry of the same logical request:
+
+- **First request** with a given key: processed normally and its response is stored against `(apiKeyId, key)`.
+- **Retry with the same key and the same request body**: the stored response is returned verbatim (same status code and body) without re-running the handler, and the response carries:
+
+  ```http
+  Idempotent-Replayed: true
+  ```
+
+- **Same key with a different request body**: rejected — the key must not be reused for a different request.
+
+  **Response `409`**
+
+  ```json
+  { "error": { "type": "idempotency_error", "code": "idempotency_key_reuse", "message": "Idempotency-Key was reused with a different request body" } }
+  ```
+
+- **Same key while the original request is still being processed** (a concurrent duplicate):
+
+  **Response `409`**
+
+  ```json
+  { "error": { "type": "idempotency_error", "code": "request_in_progress", "message": "A request with this Idempotency-Key is already in progress" } }
+  ```
+
+If no `Idempotency-Key` header is sent, the request is processed normally with no dedup behavior.
