@@ -117,9 +117,13 @@ describe('subscription domain', () => {
     const canceled = buildSub({ status: 'canceled', canceledAt: now });
     vi.mocked(prisma.subscription.update).mockResolvedValue(canceled);
 
-    const result = await cancelSubscription('sub_1', 'key_1');
+    const result = await cancelSubscription('sub_1', 'key_1', 'session_1');
 
     expect(result?.status).toBe('canceled');
+    const findArgs = vi.mocked(prisma.subscription.findFirst).mock.calls[0]![0];
+    expect(findArgs?.where).toEqual(
+      expect.objectContaining({ id: 'sub_1', apiKeyId: 'key_1', sessionId: 'session_1' }),
+    );
     const args = vi.mocked(prisma.subscription.update).mock.calls[0]![0];
     expect(args.data.status).toBe('canceled');
     expect(args.data.canceledAt).toEqual(now);
@@ -127,6 +131,6 @@ describe('subscription domain', () => {
 
   it('cancelSubscription returns null when not found', async () => {
     vi.mocked(prisma.subscription.findFirst).mockResolvedValue(null);
-    expect(await cancelSubscription('missing', 'key_1')).toBeNull();
+    expect(await cancelSubscription('missing', 'key_1', 'session_1')).toBeNull();
   });
 });

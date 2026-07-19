@@ -71,8 +71,12 @@ export async function createSubscription(input: CreateSubscriptionInput): Promis
   });
 }
 
-export async function getSubscription(id: string, apiKeyId: string): Promise<Subscription | null> {
-  return prisma.subscription.findFirst({ where: { id, apiKeyId } });
+export async function getSubscription(
+  id: string,
+  apiKeyId: string,
+  sessionId: string,
+): Promise<Subscription | null> {
+  return prisma.subscription.findFirst({ where: { id, apiKeyId, sessionId } });
 }
 
 export async function listSubscriptions(
@@ -88,8 +92,9 @@ export async function listSubscriptions(
 export async function cancelSubscription(
   id: string,
   apiKeyId: string,
+  sessionId: string,
 ): Promise<Subscription | null> {
-  const existing = await prisma.subscription.findFirst({ where: { id, apiKeyId } });
+  const existing = await prisma.subscription.findFirst({ where: { id, apiKeyId, sessionId } });
   if (!existing) {
     return null;
   }

@@ -11,6 +11,7 @@ import { escrowRoutes } from './routes/escrows.js';
 import { inboundWebhookRoutes } from './routes/inbound-webhooks.js';
 import { quoteRoutes } from './routes/quote.js';
 import { sessionRoutes } from './routes/session.js';
+import { subscriptionRoutes } from './routes/subscriptions.js';
 import { testControlRoutes } from './routes/test-controls.js';
 
 type GatewayVariables = {
@@ -52,6 +53,7 @@ export function createApp(): Hono<{ Variables: GatewayVariables }> {
 
   app.route('/v1/session', sessionRoutes);
   app.route('/v1/escrows', escrowRoutes);
+  app.route('/v1/subscriptions', subscriptionRoutes);
   app.route('/v1/test', testControlRoutes);
   app.route('/v1/quote', quoteRoutes);
   app.route('/v1/webhooks/inbound', inboundWebhookRoutes);
