@@ -3,9 +3,14 @@ import {
   CheckoutFlowController,
   type CheckoutMode,
   createBridgeClient,
+  type DeepPartial,
   type Escrow,
   type PactoBridgeMessage,
+  type PactoLocale,
+  type PactoMessages,
   type PactoSessionData,
+  type PactoTheme,
+  resolveMessages,
 } from '@pacto-connect/core';
 import { injectCheckoutStyles } from './styles.js';
 import { CheckoutView } from './ui.js';
@@ -24,6 +29,15 @@ export interface PactoCheckoutOptions {
   allowedOrigins?: string[];
   /** Inject the default modal stylesheet (default `true`). Set `false` to fully self-style. */
   injectStyles?: boolean;
+  /** Widget copy locale (default `en`). */
+  locale?: PactoLocale;
+  /** Per-string copy overrides / additional locale. */
+  messages?: DeepPartial<PactoMessages>;
+  /** Design tokens applied as `--pacto-*` CSS variables. */
+  theme?: DeepPartial<PactoTheme>;
+  /** Brand logo shown in the checkout header. */
+  logoUrl?: string;
+  logoAlt?: string;
   onComplete?: (escrow: Escrow) => void;
   onDispute?: (escrow: Escrow) => void;
   onError?: (error: Error) => void;
@@ -100,6 +114,9 @@ export class PactoCheckoutElement extends HTMLElement {
       'test-mode',
       'allowed-origins',
       'inject-styles',
+      'locale',
+      'logo-url',
+      'logo-alt',
     ];
   }
 
@@ -171,6 +188,9 @@ export class PactoCheckoutElement extends HTMLElement {
       injectStyles:
         !this.hasAttribute('inject-styles') ||
         parseBooleanAttribute(this.getAttribute('inject-styles')),
+      locale: (this.getAttribute('locale') as PactoLocale | null) ?? undefined,
+      logoUrl: this.getAttribute('logo-url') ?? undefined,
+      logoAlt: this.getAttribute('logo-alt') ?? undefined,
     };
   }
 
@@ -227,6 +247,10 @@ export class PactoCheckoutElement extends HTMLElement {
 
     this.view = new CheckoutView(this, this.controller, {
       onClose: () => this.close(),
+      messages: resolveMessages(options.locale, options.messages),
+      theme: options.theme,
+      logoUrl: options.logoUrl,
+      logoAlt: options.logoAlt,
     });
 
     void this.controller.start();
@@ -298,6 +322,15 @@ export function applyCheckoutOptions(
   }
   if (options.injectStyles === false) {
     element.setAttribute('inject-styles', 'false');
+  }
+  if (options.locale) {
+    element.setAttribute('locale', options.locale);
+  }
+  if (options.logoUrl) {
+    element.setAttribute('logo-url', options.logoUrl);
+  }
+  if (options.logoAlt) {
+    element.setAttribute('logo-alt', options.logoAlt);
   }
 
   element.applyOptions(options);
