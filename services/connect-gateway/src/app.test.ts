@@ -276,6 +276,50 @@ describe('admin key cutover', () => {
   });
 });
 
+describe('admin key creation origin validation', () => {
+  beforeEach(() => {
+    process.env.GATEWAY_ADMIN_TOKEN = 'test-admin-token';
+    vi.mocked(keys.createApiKey).mockResolvedValue({
+      id: 'k',
+      publishableKey: 'pk_test_x',
+      secretKey: 'sk_test_x',
+      secretLast4: 'x',
+      mode: 'test',
+      allowedOrigins: ['https://shop.example'],
+      status: 'active',
+      label: null,
+      quoteSpreadBps: 0,
+      rotatedFromId: null,
+      graceExpiresAt: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+  });
+
+  const post = (allowedOrigins: unknown) =>
+    createApp().request('/admin/keys', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-admin-token', 'Content-Type': 'application/json' },
+      body: JSON.stringify({ mode: 'test', allowedOrigins }),
+    });
+
+  it('rejects a bare wildcard origin', async () => {
+    const res = await post(['*']);
+    expect(res.status).toBe(400);
+    expect((await res.json()).code).toBe('invalid_request');
+  });
+
+  it('rejects a malformed origin', async () => {
+    const res = await post(['not-a-url']);
+    expect(res.status).toBe(400);
+  });
+
+  it('accepts an exact origin and a single-label wildcard', async () => {
+    const res = await post(['https://shop.example', 'https://*.example.com']);
+    expect(res.status).toBe(201);
+  });
+});
+
 describe('quote route', () => {
   beforeEach(() => {
     process.env.GATEWAY_SIGNING_SECRET = 'test-signing-secret';

@@ -1,6 +1,13 @@
 import type { KeyMode } from '@prisma/client';
 import { Hono } from 'hono';
-import { createApiKey, cutoverApiKey, listApiKeys, revokeApiKey, rotateApiKey } from '../keys.js';
+import {
+  createApiKey,
+  cutoverApiKey,
+  listApiKeys,
+  normalizeOrigin,
+  revokeApiKey,
+  rotateApiKey,
+} from '../keys.js';
 import { adminAuth } from '../middleware/admin.js';
 import { webhookRoutes } from './webhooks.js';
 
@@ -31,8 +38,13 @@ admin.post('/keys', async (c) => {
   }
 
   for (const origin of body.allowedOrigins) {
-    if (typeof origin !== 'string' || !origin.startsWith('http')) {
-      return c.json({ error: 'each allowedOrigin must be a valid http(s) origin' }, 400);
+    if (typeof origin !== 'string') {
+      return c.json({ error: 'each allowedOrigin must be a string', code: 'invalid_request' }, 400);
+    }
+    const isWildcard = /^https?:\/\/\*\.[a-z0-9.-]+(?::\d+)?$/i.test(origin);
+    const isExact = normalizeOrigin(origin) !== null;
+    if (!isWildcard && !isExact) {
+      return c.json({ error: `invalid allowedOrigin: ${origin}`, code: 'invalid_request' }, 400);
     }
   }
 
