@@ -22,6 +22,14 @@ const mockApiKey: ApiKey = {
 vi.mock('./keys.js', () => ({
   findActiveApiKeyByPublishableKey: vi.fn(),
   isOriginAllowed: (origin: string, allowed: string[]) => allowed.includes(origin),
+  normalizeOrigin: (raw: string) => {
+    try {
+      const u = new URL(raw);
+      return u.origin.toLowerCase();
+    } catch {
+      return null;
+    }
+  },
   createApiKey: vi.fn(),
   cutoverApiKey: vi.fn(),
   listApiKeys: vi.fn(),
@@ -64,7 +72,10 @@ describe('origin validation middleware', () => {
     });
 
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'origin not allowed for this key' });
+    expect(await res.json()).toEqual({
+      error: 'origin not allowed for this key',
+      code: 'origin_not_allowed',
+    });
   });
 
   it('rejects requests without an origin header', async () => {
@@ -76,7 +87,10 @@ describe('origin validation middleware', () => {
     });
 
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'origin header required' });
+    expect(await res.json()).toEqual({
+      error: 'origin or referer header required',
+      code: 'origin_required',
+    });
   });
 
   it('rejects revoked or unknown keys', async () => {
@@ -91,7 +105,10 @@ describe('origin validation middleware', () => {
     });
 
     expect(res.status).toBe(403);
-    expect(await res.json()).toEqual({ error: 'invalid or revoked publishable key' });
+    expect(await res.json()).toEqual({
+      error: 'invalid or revoked publishable key',
+      code: 'key_invalid',
+    });
   });
 
   it('allows valid origin and sets strict CORS headers', async () => {

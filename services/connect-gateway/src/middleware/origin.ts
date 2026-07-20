@@ -1,5 +1,5 @@
 import type { Context, Next } from 'hono';
-import { findActiveApiKeyByPublishableKey, isOriginAllowed } from '../keys.js';
+import { findActiveApiKeyByPublishableKey, isOriginAllowed, normalizeOrigin } from '../keys.js';
 
 export const PUBLISHABLE_KEY_HEADER = 'x-pacto-publishable-key';
 
@@ -28,24 +28,48 @@ function setCorsHeaders(c: Context, origin: string): void {
   );
 }
 
+function originFromReferer(referer: string): string | null {
+  // Referer includes the full URL (path/query/hash); normalizeOrigin rejects
+  // that shape, so strip down to the origin component first.
+  try {
+    return normalizeOrigin(new URL(referer).origin);
+  } catch {
+    return null;
+  }
+}
+
+function resolveRequestOrigin(c: Context): { origin: string | null; present: boolean } {
+  const originHeader = c.req.header('Origin');
+  if (originHeader !== undefined) {
+    return { origin: normalizeOrigin(originHeader), present: true };
+  }
+  const referer = c.req.header('Referer');
+  if (referer !== undefined) {
+    return { origin: originFromReferer(referer), present: true };
+  }
+  return { origin: null, present: false };
+}
+
 export async function originValidation(c: Context, next: Next): Promise<Response | void> {
   const publishableKey = extractPublishableKey(c);
   if (!publishableKey) {
-    return c.json({ error: 'publishable key required' }, 401);
+    return c.json({ error: 'publishable key required', code: 'key_required' }, 401);
   }
 
   const apiKey = await findActiveApiKeyByPublishableKey(publishableKey);
   if (!apiKey) {
-    return c.json({ error: 'invalid or revoked publishable key' }, 403);
+    return c.json({ error: 'invalid or revoked publishable key', code: 'key_invalid' }, 403);
   }
 
-  const origin = c.req.header('Origin');
+  const { origin, present } = resolveRequestOrigin(c);
+  if (!present) {
+    return c.json({ error: 'origin or referer header required', code: 'origin_required' }, 403);
+  }
   if (!origin) {
-    return c.json({ error: 'origin header required' }, 403);
+    return c.json({ error: 'malformed origin', code: 'invalid_origin' }, 403);
   }
-
   if (!isOriginAllowed(origin, apiKey.allowedOrigins)) {
-    return c.json({ error: 'origin not allowed for this key' }, 403);
+    return c.json({ error: 'origin not allowed for this key', code: 'origin_not_allowed' }, 403);
   }
 
   setCorsHeaders(c, origin);

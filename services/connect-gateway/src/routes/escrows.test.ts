@@ -35,6 +35,14 @@ let mockCheckoutSession: CheckoutSession;
 vi.mock('../keys.js', () => ({
   findActiveApiKeyByPublishableKey: vi.fn(),
   isOriginAllowed: (origin: string, allowed: string[]) => allowed.includes(origin),
+  normalizeOrigin: (raw: string) => {
+    try {
+      const u = new URL(raw);
+      return u.origin.toLowerCase();
+    } catch {
+      return null;
+    }
+  },
   createApiKey: vi.fn(),
   listApiKeys: vi.fn(),
   rotateApiKey: vi.fn(),
