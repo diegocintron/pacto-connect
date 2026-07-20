@@ -4,6 +4,14 @@ import { prisma } from './db.js';
 
 const KEY_RANDOM_BYTES = 24;
 
+const DEFAULT_GRACE_MS = 24 * 60 * 60 * 1000;
+
+function gracePeriodMs(): number {
+  const raw = process.env.KEY_ROTATION_GRACE_MS;
+  const parsed = raw ? Number.parseInt(raw, 10) : Number.NaN;
+  return Number.isInteger(parsed) && parsed > 0 ? parsed : DEFAULT_GRACE_MS;
+}
+
 export interface CreateKeyInput {
   mode: KeyMode;
   allowedOrigins: string[];
@@ -25,6 +33,8 @@ export interface ApiKeyPublic {
   status: ApiKey['status'];
   label: string | null;
   quoteSpreadBps: number;
+  rotatedFromId: string | null;
+  graceExpiresAt: Date | null;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -65,6 +75,8 @@ function toPublic(record: ApiKey): ApiKeyPublic {
     status: record.status,
     label: record.label,
     quoteSpreadBps: record.quoteSpreadBps,
+    rotatedFromId: record.rotatedFromId,
+    graceExpiresAt: record.graceExpiresAt,
     createdAt: record.createdAt,
     updatedAt: record.updatedAt,
   };
@@ -101,20 +113,61 @@ export async function rotateApiKey(id: string): Promise<ApiKeyCreated | null> {
     return null;
   }
 
-  const pair = generateKeyPair(existing.mode);
+  const alreadyRotated = await prisma.apiKey.findUnique({
+    where: { rotatedFromId: existing.id },
+  });
+  if (alreadyRotated) {
+    return null;
+  }
 
-  const record = await prisma.apiKey.update({
-    where: { id },
-    data: {
-      secretKeyHash: hashSecretKey(pair.secretKey),
-      secretLast4: pair.secretKey.slice(-4),
-    },
+  const pair = generateKeyPair(existing.mode);
+  const graceExpiresAt = new Date(Date.now() + gracePeriodMs());
+
+  const created = await prisma.$transaction(async (tx) => {
+    const record = await tx.apiKey.create({
+      data: {
+        publishableKey: pair.publishableKey,
+        secretKeyHash: hashSecretKey(pair.secretKey),
+        secretLast4: pair.secretKey.slice(-4),
+        mode: existing.mode,
+        allowedOrigins: existing.allowedOrigins,
+        label: existing.label,
+        quoteSpreadBps: existing.quoteSpreadBps,
+        rotatedFromId: existing.id,
+      },
+    });
+    await tx.apiKey.update({
+      where: { id: existing.id },
+      data: { graceExpiresAt },
+    });
+    return record;
   });
 
   return {
-    ...toPublic(record),
+    ...toPublic(created),
     secretKey: pair.secretKey,
   };
+}
+
+export async function cutoverApiKey(id: string): Promise<ApiKeyPublic | null> {
+  const key = await prisma.apiKey.findUnique({ where: { id } });
+  if (!key) {
+    return null;
+  }
+
+  // Revoke the predecessor when given the new key's id; when given an old key
+  // that is itself in a grace window (rotatedFromId null but graceExpiresAt set),
+  // revoke that old key directly. Otherwise there is nothing to cut over.
+  const targetId = key.rotatedFromId ?? (key.graceExpiresAt ? key.id : null);
+  if (!targetId) {
+    return null;
+  }
+
+  const record = await prisma.apiKey.update({
+    where: { id: targetId },
+    data: { status: 'revoked' },
+  });
+  return toPublic(record);
 }
 
 export async function revokeApiKey(id: string): Promise<ApiKeyPublic | null> {
@@ -139,10 +192,20 @@ export async function listApiKeys(): Promise<ApiKeyPublic[]> {
 export async function findActiveApiKeyByPublishableKey(
   publishableKey: string,
 ): Promise<ApiKey | null> {
-  return prisma.apiKey.findFirst({
+  const key = await prisma.apiKey.findFirst({
     where: {
       publishableKey,
       status: 'active',
     },
   });
+  if (!key) {
+    return null;
+  }
+
+  if (key.graceExpiresAt && key.graceExpiresAt.getTime() <= Date.now()) {
+    await prisma.apiKey.update({ where: { id: key.id }, data: { status: 'revoked' } });
+    return null;
+  }
+
+  return key;
 }

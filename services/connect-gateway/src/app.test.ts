@@ -157,6 +157,8 @@ describe('admin routes', () => {
         status: 'active',
         label: null,
         quoteSpreadBps: 0,
+        rotatedFromId: null,
+        graceExpiresAt: null,
         createdAt: new Date('2024-01-01T00:00:00.000Z'),
         updatedAt: new Date('2024-01-01T00:00:00.000Z'),
       },
@@ -185,6 +187,8 @@ describe('admin routes', () => {
       status: 'active',
       label: null,
       quoteSpreadBps: 0,
+      rotatedFromId: null,
+      graceExpiresAt: null,
       createdAt: new Date(),
       updatedAt: new Date(),
     });
