@@ -111,7 +111,12 @@ export function matchOrigin(requestOrigin: string, pattern: string): boolean {
 
   const wildcard = WILDCARD_PATTERN.exec(pattern);
   if (wildcard) {
-    const [, proto, base, port] = wildcard as unknown as [string, string, string, string | undefined];
+    const [, proto, base, port] = wildcard as unknown as [
+      string,
+      string,
+      string,
+      string | undefined,
+    ];
     const requestUrl = new URL(normalizedRequest);
     if (requestUrl.protocol !== `${proto.toLowerCase()}:`) {
       return false;

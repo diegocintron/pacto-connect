@@ -14,8 +14,14 @@ vi.mock('./db.js', () => ({
 
 import type { ApiKey } from '@prisma/client';
 import { prisma } from './db.js';
-import { cutoverApiKey, findActiveApiKeyByPublishableKey, rotateApiKey } from './keys.js';
-import { isOriginAllowed, matchOrigin, normalizeOrigin } from './keys.js';
+import {
+  cutoverApiKey,
+  findActiveApiKeyByPublishableKey,
+  isOriginAllowed,
+  matchOrigin,
+  normalizeOrigin,
+  rotateApiKey,
+} from './keys.js';
 
 function prismaMock() {
   return prisma;
@@ -239,7 +245,9 @@ describe('matchOrigin', () => {
 
 describe('isOriginAllowed', () => {
   it('returns true when any pattern matches', () => {
-    expect(isOriginAllowed('https://app.example.com', ['https://x.io', 'https://*.example.com'])).toBe(true);
+    expect(
+      isOriginAllowed('https://app.example.com', ['https://x.io', 'https://*.example.com']),
+    ).toBe(true);
   });
   it('returns false for a malformed origin', () => {
     expect(isOriginAllowed('not a url', ['https://*.example.com'])).toBe(false);
