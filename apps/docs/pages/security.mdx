@@ -1,0 +1,92 @@
+# Security
+
+Guidance for embedding `connect-elements` safely: a Content-Security-Policy you can
+copy-paste, and how the checkout iframe is sandboxed.
+
+Which CSP you need depends on how you embed the checkout:
+
+- **`pacto.mount()` / `<PactoCheckout>` (default)** renders the checkout **in your own
+  page** and injects a small `<style>` tag into your document. Your page's CSP governs it.
+- **`pacto.mountFrame()`** renders the checkout inside a cross-origin `<iframe>` pointed at
+  a hosted checkout page. Your page's CSP only governs the frame embedding; the checkout's
+  own scripts/styles run under the hosted page's CSP.
+
+## CSP for `pacto.mount()` / `<PactoCheckout>` (in-page)
+
+The widget calls the Pacto gateway over `fetch`, and by default injects one `<style>` tag
+into `document.head` for the modal. Inline `<style>` is **not** covered by `style-src 'self'`,
+so you must allow it one of two ways:
+
+**Option A — allow the injected stylesheet with `'unsafe-inline'` on `style-src` only:**
+
+```http
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self' https://cdn.your-domain.com;
+  connect-src 'self' https://gateway.pacto.example;
+  style-src 'self' 'unsafe-inline';
+  img-src 'self' data:;
+```
+
+**Option B — keep `style-src 'self'` strict and supply the CSS yourself.** Pass
+`injectStyles: false` to `mount()` (or the `<PactoCheckout>` component) and ship the
+checkout CSS through your own bundler, so no inline `<style>` is injected:
+
+```http
+Content-Security-Policy:
+  default-src 'self';
+  script-src 'self' https://cdn.your-domain.com;
+  connect-src 'self' https://gateway.pacto.example;
+  style-src 'self';
+  img-src 'self' data:;
+```
+
+- `script-src` — the origin serving the `connect-elements` bundle. The widget needs
+  **no** `'unsafe-inline'` and **no** `'unsafe-eval'` for scripts.
+- `connect-src` — the Pacto gateway origin the widget calls with `fetch`.
+- `img-src` — add the origin of any custom `logoUrl` you pass (e.g. your CDN); the default
+  `'self' data:` only covers same-origin and inline data-URI images.
+
+## CSP for `pacto.mountFrame()` (isolated iframe)
+
+Here the checkout is a cross-origin `<iframe>`, so your CSP only needs to permit the frame
+and the gateway `fetch`. The checkout page's own styles/scripts live inside the frame and
+are governed by that hosted page's CSP, not yours:
+
+```http
+Content-Security-Policy:
+  default-src 'self';
+  frame-src https://checkout.your-domain.com;
+  child-src https://checkout.your-domain.com;
+  connect-src 'self' https://gateway.pacto.example;
+```
+
+- `frame-src` / `child-src` — the origin serving the hosted checkout page (`child-src` is a
+  legacy fallback for older browsers; listing both is harmless).
+- `connect-src` — the Pacto gateway origin, in case your page also calls it directly.
+
+In every case the shipped `connect-elements` bundle contains no `eval()` / `new Function()`
+and injects no inline `<script>`, so you never need `'unsafe-eval'` or a `script-src`
+`'unsafe-inline'`. This repo's build treats either pattern appearing in the bundle as a
+regression to fix — not a CSP to loosen.
+
+## iframe sandboxing
+
+`pacto.mountFrame()` renders the checkout in a sandboxed iframe with exactly these tokens:
+
+```
+allow-scripts allow-forms allow-same-origin allow-popups
+```
+
+- `allow-scripts` — the checkout UI runs its own JavaScript.
+- `allow-forms` — the checkout submits its payment/quote forms.
+- `allow-same-origin` — the frame keeps its own origin so it can hold a session and
+  call the gateway.
+- `allow-popups` — provider redirects (e.g. wallet/bank confirmation) can open.
+
+> **Security note:** `allow-scripts` together with `allow-same-origin` lets the framed
+> page reach its own origin's storage. Because the checkout runs on a **separate**
+> origin from your site (never your own document origin), it cannot script your page.
+> If you self-host the checkout on your own origin, drop `allow-same-origin`.
+
+The iframe also carries `allow="payment"` so the Payment Request API works inside it.

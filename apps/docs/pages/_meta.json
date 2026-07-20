@@ -2,6 +2,7 @@
   "index": "Introduction",
   "quickstart": "Quickstart",
   "theming": "Theming & i18n",
+  "security": "Security",
   "api-reference": "API Reference",
   "playground": {
     "title": "Playground",
