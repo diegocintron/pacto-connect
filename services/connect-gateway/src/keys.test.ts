@@ -15,6 +15,7 @@ vi.mock('./db.js', () => ({
 import type { ApiKey } from '@prisma/client';
 import { prisma } from './db.js';
 import { cutoverApiKey, findActiveApiKeyByPublishableKey, rotateApiKey } from './keys.js';
+import { isOriginAllowed, matchOrigin, normalizeOrigin } from './keys.js';
 
 function prismaMock() {
   return prisma;
@@ -175,5 +176,75 @@ describe('findActiveApiKeyByPublishableKey lazy grace expiry', () => {
       where: { id: 'key_old' },
       data: { status: 'revoked' },
     });
+  });
+});
+
+describe('normalizeOrigin', () => {
+  it('canonicalizes a valid origin and lowercases the host', () => {
+    expect(normalizeOrigin('https://App.Example.com')).toBe('https://app.example.com');
+  });
+  it('preserves an explicit port', () => {
+    expect(normalizeOrigin('http://localhost:3000')).toBe('http://localhost:3000');
+  });
+  it('rejects non-http(s) schemes', () => {
+    expect(normalizeOrigin('ftp://example.com')).toBeNull();
+    expect(normalizeOrigin('javascript:alert(1)')).toBeNull();
+  });
+  it('rejects values carrying a path, query, fragment, or credentials', () => {
+    expect(normalizeOrigin('https://example.com/path')).toBeNull();
+    expect(normalizeOrigin('https://example.com/?x=1')).toBeNull();
+    expect(normalizeOrigin('https://user:pass@example.com')).toBeNull();
+  });
+  it('rejects garbage', () => {
+    expect(normalizeOrigin('not a url')).toBeNull();
+    expect(normalizeOrigin('')).toBeNull();
+  });
+});
+
+describe('matchOrigin', () => {
+  it('matches an exact origin', () => {
+    expect(matchOrigin('https://shop.example', 'https://shop.example')).toBe(true);
+  });
+  it('matches a single subdomain label under a wildcard', () => {
+    expect(matchOrigin('https://app.example.com', 'https://*.example.com')).toBe(true);
+  });
+  it('does NOT match the apex under a wildcard', () => {
+    expect(matchOrigin('https://example.com', 'https://*.example.com')).toBe(false);
+  });
+  it('does NOT match multi-level subdomains under a wildcard', () => {
+    expect(matchOrigin('https://a.b.example.com', 'https://*.example.com')).toBe(false);
+  });
+  it('rejects protocol and port mismatches', () => {
+    expect(matchOrigin('http://app.example.com', 'https://*.example.com')).toBe(false);
+    expect(matchOrigin('https://app.example.com:8443', 'https://*.example.com')).toBe(false);
+  });
+  it('never matches a bare wildcard', () => {
+    expect(matchOrigin('https://anything.com', '*')).toBe(false);
+    expect(matchOrigin('https://anything.com', 'https://*')).toBe(false);
+  });
+  it('rejects a bare wildcard regardless of scheme case', () => {
+    expect(matchOrigin('https://anything.com', 'HTTPS://*')).toBe(false);
+    expect(matchOrigin('https://*', 'HTTPS://*')).toBe(false);
+    expect(matchOrigin('https://anything.com', 'HTTP://*')).toBe(false);
+  });
+  it('matches a single-label wildcard with an explicit port', () => {
+    expect(matchOrigin('https://app.example.com:8443', 'https://*.example.com:8443')).toBe(true);
+    expect(matchOrigin('https://app.example.com', 'https://*.example.com:8443')).toBe(false);
+  });
+  it('rejects an FQDN trailing-dot host', () => {
+    expect(matchOrigin('https://app.example.com.', 'https://*.example.com')).toBe(false);
+    expect(matchOrigin('https://app.example.com.', 'https://app.example.com')).toBe(false);
+  });
+});
+
+describe('isOriginAllowed', () => {
+  it('returns true when any pattern matches', () => {
+    expect(isOriginAllowed('https://app.example.com', ['https://x.io', 'https://*.example.com'])).toBe(true);
+  });
+  it('returns false for a malformed origin', () => {
+    expect(isOriginAllowed('not a url', ['https://*.example.com'])).toBe(false);
+  });
+  it('returns false when nothing matches', () => {
+    expect(isOriginAllowed('https://evil.example', ['https://shop.example'])).toBe(false);
   });
 });
