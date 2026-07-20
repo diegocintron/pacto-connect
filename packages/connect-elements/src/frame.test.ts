@@ -1,6 +1,6 @@
 import { PACTO_BRIDGE_SOURCE, PACTO_BRIDGE_VERSION } from '@pacto-connect/core';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
-import { mountFrame } from './frame';
+import { FRAME_SANDBOX, mountFrame } from './frame';
 
 const frameUrl = 'https://checkout.pacto.example/embed';
 const frameOrigin = 'https://checkout.pacto.example';
@@ -138,6 +138,17 @@ describe('mountFrame', () => {
     );
 
     postMessage.mockRestore();
+    handle.destroy();
+  });
+
+  it('applies exactly the documented sandbox tokens and payment permission', () => {
+    const handle = mountFrame('#checkout-root', {
+      url: frameUrl,
+      publishableKey: 'pk_test_x',
+    });
+    expect(handle.iframe.getAttribute('sandbox')).toBe(FRAME_SANDBOX);
+    expect(handle.iframe.getAttribute('allow')).toBe('payment');
+    expect(FRAME_SANDBOX).toBe('allow-scripts allow-forms allow-same-origin allow-popups');
     handle.destroy();
   });
 

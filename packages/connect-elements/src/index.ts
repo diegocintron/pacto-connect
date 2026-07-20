@@ -15,7 +15,7 @@ export {
   registerPactoCheckoutElement,
 } from './element.js';
 export { createFocusTrap, type FocusTrap } from './focus-trap.js';
-export { type FrameHandle, type FrameMountOptions, mountFrame } from './frame.js';
+export { FRAME_SANDBOX, type FrameHandle, type FrameMountOptions, mountFrame } from './frame.js';
 export {
   type BootstrapCheckoutFrameOptions,
   bootstrapCheckoutFrame,

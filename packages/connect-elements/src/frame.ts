@@ -9,6 +9,9 @@ import {
 } from '@pacto-connect/core';
 import { resolveTarget } from './mount.js';
 
+/** Sandbox tokens applied to the checkout iframe. Source of truth for docs + CSP tests. */
+export const FRAME_SANDBOX = 'allow-scripts allow-forms allow-same-origin allow-popups';
+
 /**
  * Host-side iframe embed.
  *
@@ -109,10 +112,10 @@ export function mountFrame(
   const iframe = document.createElement('iframe');
   iframe.src = buildFrameSrc(options);
   iframe.title = options.title ?? 'Pacto checkout';
-  iframe.allow = 'payment';
+  iframe.setAttribute('allow', 'payment');
   // Cross-origin isolation: scripts/forms run, but the frame cannot navigate
   // the top window or escape its sandbox.
-  iframe.setAttribute('sandbox', 'allow-scripts allow-forms allow-same-origin allow-popups');
+  iframe.setAttribute('sandbox', FRAME_SANDBOX);
   if (options.className) {
     iframe.className = options.className;
   }
