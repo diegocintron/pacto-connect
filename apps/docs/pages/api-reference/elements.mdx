@@ -3788,7 +3788,7 @@ Defined in: [packages/connect-elements/src/mount.ts:33](https://github.com/PACTO
 function mountFrame(selector, options): FrameHandle;
 ```
 
-Defined in: [packages/connect-elements/src/frame.ts:94](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L94)
+Defined in: [packages/connect-elements/src/frame.ts:97](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L97)
 
 ## Parameters
 
@@ -3895,13 +3895,13 @@ Remove listeners and restore focus to the previously focused element.
 
 # Interface: FrameHandle
 
-Defined in: [packages/connect-elements/src/frame.ts:51](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L51)
+Defined in: [packages/connect-elements/src/frame.ts:54](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L54)
 
 ## Properties
 
 | Property | Modifier | Type | Defined in |
 | ------ | ------ | ------ | ------ |
-| <a id="iframe"></a> `iframe` | `readonly` | `HTMLIFrameElement` | [packages/connect-elements/src/frame.ts:52](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L52) |
+| <a id="iframe"></a> `iframe` | `readonly` | `HTMLIFrameElement` | [packages/connect-elements/src/frame.ts:55](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L55) |
 
 ## Methods
 
@@ -3911,7 +3911,7 @@ Defined in: [packages/connect-elements/src/frame.ts:51](https://github.com/PACTO
 close(): void;
 ```
 
-Defined in: [packages/connect-elements/src/frame.ts:54](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L54)
+Defined in: [packages/connect-elements/src/frame.ts:57](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L57)
 
 Ask the embedded checkout to close, then run the `onClose` callback.
 
@@ -3927,7 +3927,7 @@ Ask the embedded checkout to close, then run the `onClose` callback.
 destroy(): void;
 ```
 
-Defined in: [packages/connect-elements/src/frame.ts:56](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L56)
+Defined in: [packages/connect-elements/src/frame.ts:59](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L59)
 
 Tear down the bridge and remove the iframe from the DOM.
 
@@ -3940,7 +3940,7 @@ Tear down the bridge and remove the iframe from the DOM.
 
 # Interface: FrameMountOptions
 
-Defined in: [packages/connect-elements/src/frame.ts:26](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L26)
+Defined in: [packages/connect-elements/src/frame.ts:29](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L29)
 
 Host-side iframe embed.
 
@@ -3958,22 +3958,22 @@ payment UI.
 
 | Property | Type | Description | Defined in |
 | ------ | ------ | ------ | ------ |
-| <a id="allowedorigins"></a> `allowedOrigins?` | `string`[] | Origins permitted to message the host. Defaults to the origin of `url`. Messages from any other origin are dropped by the bridge. | [packages/connect-elements/src/frame.ts:38](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L38) |
-| <a id="classname"></a> `className?` | `string` | - | [packages/connect-elements/src/frame.ts:42](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L42) |
-| <a id="listingid"></a> `listingId?` | `string` | - | [packages/connect-elements/src/frame.ts:30](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L30) |
-| <a id="mode"></a> `mode?` | `CheckoutMode` | - | [packages/connect-elements/src/frame.ts:32](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L32) |
-| <a id="onclose"></a> `onClose?` | () => `void` | - | [packages/connect-elements/src/frame.ts:48](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L48) |
-| <a id="oncomplete"></a> `onComplete?` | (`escrow`) => `void` | - | [packages/connect-elements/src/frame.ts:45](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L45) |
-| <a id="ondispute"></a> `onDispute?` | (`escrow`) => `void` | - | [packages/connect-elements/src/frame.ts:46](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L46) |
-| <a id="onerror"></a> `onError?` | (`error`) => `void` | - | [packages/connect-elements/src/frame.ts:47](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L47) |
-| <a id="onready"></a> `onReady?` | (`sessionId`) => `void` | - | [packages/connect-elements/src/frame.ts:43](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L43) |
-| <a id="onstep"></a> `onStep?` | (`step`) => `void` | - | [packages/connect-elements/src/frame.ts:44](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L44) |
-| <a id="params"></a> `params?` | `Record`\<`string`, `string`\> | Extra query parameters appended to the iframe `src`. | [packages/connect-elements/src/frame.ts:40](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L40) |
-| <a id="publishablekey"></a> `publishableKey` | `string` | - | [packages/connect-elements/src/frame.ts:29](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L29) |
-| <a id="sessionid"></a> `sessionId?` | `string` | - | [packages/connect-elements/src/frame.ts:31](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L31) |
-| <a id="testmode"></a> `testMode?` | `boolean` | - | [packages/connect-elements/src/frame.ts:33](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L33) |
-| <a id="title"></a> `title?` | `string` | - | [packages/connect-elements/src/frame.ts:41](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L41) |
-| <a id="url"></a> `url` | `string` | URL of the hosted checkout page (the side that calls `bootstrapCheckoutFrame`). | [packages/connect-elements/src/frame.ts:28](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L28) |
+| <a id="allowedorigins"></a> `allowedOrigins?` | `string`[] | Origins permitted to message the host. Defaults to the origin of `url`. Messages from any other origin are dropped by the bridge. | [packages/connect-elements/src/frame.ts:41](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L41) |
+| <a id="classname"></a> `className?` | `string` | - | [packages/connect-elements/src/frame.ts:45](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L45) |
+| <a id="listingid"></a> `listingId?` | `string` | - | [packages/connect-elements/src/frame.ts:33](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L33) |
+| <a id="mode"></a> `mode?` | `CheckoutMode` | - | [packages/connect-elements/src/frame.ts:35](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L35) |
+| <a id="onclose"></a> `onClose?` | () => `void` | - | [packages/connect-elements/src/frame.ts:51](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L51) |
+| <a id="oncomplete"></a> `onComplete?` | (`escrow`) => `void` | - | [packages/connect-elements/src/frame.ts:48](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L48) |
+| <a id="ondispute"></a> `onDispute?` | (`escrow`) => `void` | - | [packages/connect-elements/src/frame.ts:49](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L49) |
+| <a id="onerror"></a> `onError?` | (`error`) => `void` | - | [packages/connect-elements/src/frame.ts:50](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L50) |
+| <a id="onready"></a> `onReady?` | (`sessionId`) => `void` | - | [packages/connect-elements/src/frame.ts:46](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L46) |
+| <a id="onstep"></a> `onStep?` | (`step`) => `void` | - | [packages/connect-elements/src/frame.ts:47](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L47) |
+| <a id="params"></a> `params?` | `Record`\<`string`, `string`\> | Extra query parameters appended to the iframe `src`. | [packages/connect-elements/src/frame.ts:43](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L43) |
+| <a id="publishablekey"></a> `publishableKey` | `string` | - | [packages/connect-elements/src/frame.ts:32](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L32) |
+| <a id="sessionid"></a> `sessionId?` | `string` | - | [packages/connect-elements/src/frame.ts:34](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L34) |
+| <a id="testmode"></a> `testMode?` | `boolean` | - | [packages/connect-elements/src/frame.ts:36](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L36) |
+| <a id="title"></a> `title?` | `string` | - | [packages/connect-elements/src/frame.ts:44](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L44) |
+| <a id="url"></a> `url` | `string` | URL of the hosted checkout page (the side that calls `bootstrapCheckoutFrame`). | [packages/connect-elements/src/frame.ts:31](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L31) |
 
 
 ---
@@ -4123,6 +4123,19 @@ const ELEMENT_TAG: "pacto-checkout" = 'pacto-checkout';
 ```
 
 Defined in: [packages/connect-elements/src/element.ts:18](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/element.ts#L18)
+
+
+---
+
+# Variable: FRAME\_SANDBOX
+
+```ts
+const FRAME_SANDBOX: "allow-scripts allow-forms allow-same-origin allow-popups" = 'allow-scripts allow-forms allow-same-origin allow-popups';
+```
+
+Defined in: [packages/connect-elements/src/frame.ts:13](https://github.com/PACTO-LAT/pacto-connect/blob/main/packages/connect-elements/src/frame.ts#L13)
+
+Sandbox tokens applied to the checkout iframe. Source of truth for docs + CSP tests.
 
 
 ---
