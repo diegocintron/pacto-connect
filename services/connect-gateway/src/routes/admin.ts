@@ -1,6 +1,6 @@
 import type { KeyMode } from '@prisma/client';
 import { Hono } from 'hono';
-import { createApiKey, listApiKeys, revokeApiKey, rotateApiKey } from '../keys.js';
+import { createApiKey, cutoverApiKey, listApiKeys, revokeApiKey, rotateApiKey } from '../keys.js';
 import { adminAuth } from '../middleware/admin.js';
 import { webhookRoutes } from './webhooks.js';
 
@@ -62,6 +62,17 @@ admin.post('/keys/:id/rotate', async (c) => {
 
   if (!key) {
     return c.json({ error: 'key not found or revoked' }, 404);
+  }
+
+  return c.json({ key });
+});
+
+admin.post('/keys/:id/cutover', async (c) => {
+  const id = c.req.param('id');
+  const key = await cutoverApiKey(id);
+
+  if (!key) {
+    return c.json({ error: 'nothing to cut over' }, 404);
   }
 
   return c.json({ key });

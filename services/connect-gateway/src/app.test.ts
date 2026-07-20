@@ -23,6 +23,7 @@ vi.mock('./keys.js', () => ({
   findActiveApiKeyByPublishableKey: vi.fn(),
   isOriginAllowed: (origin: string, allowed: string[]) => allowed.includes(origin),
   createApiKey: vi.fn(),
+  cutoverApiKey: vi.fn(),
   listApiKeys: vi.fn(),
   rotateApiKey: vi.fn(),
   revokeApiKey: vi.fn(),
@@ -210,6 +211,51 @@ describe('admin routes', () => {
     const body = await res.json();
     expect(body.key.secretKey).toMatch(/^sk_test_/);
     expect(body.key.publishableKey).toMatch(/^pk_test_/);
+  });
+});
+
+describe('admin key cutover', () => {
+  beforeEach(() => {
+    vi.mocked(keys.cutoverApiKey).mockReset();
+    process.env.GATEWAY_ADMIN_TOKEN = 'test-admin-token';
+  });
+
+  it('cuts over (revokes) the predecessor key', async () => {
+    vi.mocked(keys.cutoverApiKey).mockResolvedValue({
+      id: 'key_old',
+      publishableKey: 'pk_test_old',
+      secretLast4: 'old4',
+      mode: 'test',
+      allowedOrigins: ['https://shop.example'],
+      status: 'revoked',
+      label: null,
+      quoteSpreadBps: 0,
+      rotatedFromId: null,
+      graceExpiresAt: null,
+      createdAt: new Date('2026-01-01T00:00:00.000Z'),
+      updatedAt: new Date('2026-01-01T00:00:00.000Z'),
+    });
+
+    const app = createApp();
+    const res = await app.request('/admin/keys/key_new/cutover', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-admin-token' },
+    });
+
+    expect(res.status).toBe(200);
+    expect((await res.json()).key.status).toBe('revoked');
+  });
+
+  it('returns 404 when there is nothing to cut over', async () => {
+    vi.mocked(keys.cutoverApiKey).mockResolvedValue(null);
+
+    const app = createApp();
+    const res = await app.request('/admin/keys/key_new/cutover', {
+      method: 'POST',
+      headers: { Authorization: 'Bearer test-admin-token' },
+    });
+
+    expect(res.status).toBe(404);
   });
 });
 
