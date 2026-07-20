@@ -74,9 +74,14 @@ model ApiKey {
   webhookEndpoints   WebhookEndpoint[]
   webhookEvents      WebhookEvent[]
   subscriptions      Subscription[]
+  rotatedFromId  String?           @unique
+  rotatedFrom    ApiKey?           @relation("KeyRotation", fields: [rotatedFromId], references: [id])
+  supersededBy   ApiKey?           @relation("KeyRotation")
+  graceExpiresAt DateTime?
 
   @@index([publishableKey])
   @@index([status])
+  @@index([graceExpiresAt])
 }
 
 model CheckoutSession {

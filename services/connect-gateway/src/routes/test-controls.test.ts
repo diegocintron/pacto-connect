@@ -17,6 +17,8 @@ const mockApiKey: ApiKey = {
   quoteSpreadBps: 0,
   createdAt: new Date('2024-01-01T00:00:00.000Z'),
   updatedAt: new Date('2024-01-01T00:00:00.000Z'),
+  rotatedFromId: null,
+  graceExpiresAt: null,
 };
 
 const liveApiKey: ApiKey = {
