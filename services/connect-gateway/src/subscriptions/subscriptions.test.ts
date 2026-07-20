@@ -41,6 +41,7 @@ function buildSub(overrides: Partial<Subscription> = {}): Subscription {
     canceledAt: null,
     createdAt: now,
     updatedAt: now,
+    merchantId: null,
     ...overrides,
   };
 }
@@ -84,6 +85,37 @@ describe('subscription domain', () => {
     const args = vi.mocked(prisma.subscription.create).mock.calls[0]![0];
     expect(args.data.nextChargeAt).toEqual(new Date(now.getTime() + 3000));
     expect(args.data.asset).toBe('USDC');
+  });
+
+  it('createSubscription persists merchantId', async () => {
+    vi.mocked(prisma.subscription.create).mockResolvedValue(buildSub({ merchantId: 'mrc_1' }));
+
+    await createSubscription({
+      apiKeyId: 'key_1',
+      sessionId: 'sess_1',
+      merchantId: 'mrc_1',
+      from: 'USD',
+      to: 'CRC',
+      amount: 10,
+      interval: 'day',
+    });
+
+    expect(vi.mocked(prisma.subscription.create).mock.calls[0]![0].data.merchantId).toBe('mrc_1');
+  });
+
+  it('createSubscription defaults merchantId to null when the session has none', async () => {
+    vi.mocked(prisma.subscription.create).mockResolvedValue(buildSub());
+
+    await createSubscription({
+      apiKeyId: 'key_1',
+      sessionId: 'sess_1',
+      from: 'USD',
+      to: 'CRC',
+      amount: 10,
+      interval: 'day',
+    });
+
+    expect(vi.mocked(prisma.subscription.create).mock.calls[0]![0].data.merchantId).toBeNull();
   });
 
   it('createSubscription rejects an unsupported currency', async () => {

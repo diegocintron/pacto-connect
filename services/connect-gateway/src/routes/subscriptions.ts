@@ -77,15 +77,20 @@ subscriptions.post('/', idempotency(), async (c) => {
       interval: typeof body.interval === 'string' ? body.interval : '',
       asset: typeof body.asset === 'string' ? body.asset : undefined,
       payerRef: typeof body.payerRef === 'string' ? body.payerRef : undefined,
+      merchantId: session.merchantId ?? undefined,
     });
 
-    await emitSubscriptionCreated(apiKey.id, {
-      subscriptionId: sub.id,
-      from: sub.from,
-      to: sub.to,
-      amount: sub.amount,
-      interval: sub.interval,
-    });
+    await emitSubscriptionCreated(
+      apiKey.id,
+      {
+        subscriptionId: sub.id,
+        from: sub.from,
+        to: sub.to,
+        amount: sub.amount,
+        interval: sub.interval,
+      },
+      sub.merchantId ?? undefined,
+    );
 
     return c.json({ subscription: serializeSubscription(sub) });
   } catch (error) {
@@ -156,7 +161,11 @@ subscriptions.post('/:id/cancel', async (c) => {
   }
 
   if (result.transitioned) {
-    await emitSubscriptionCanceled(apiKey.id, { subscriptionId: result.subscription.id });
+    await emitSubscriptionCanceled(
+      apiKey.id,
+      { subscriptionId: result.subscription.id },
+      result.subscription.merchantId ?? undefined,
+    );
   }
 
   return c.json({ subscription: serializeSubscription(result.subscription) });

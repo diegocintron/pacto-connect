@@ -1,6 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import { Hono } from 'hono';
 import { toGatewayErrorBody } from '../errors.js';
+import { findActiveMerchant } from '../merchants.js';
 import { dispatchEvent } from '../webhooks/delivery.js';
 import { consumeNonce, releaseNonce } from '../webhooks/nonce.js';
 import {
@@ -79,7 +80,13 @@ inbound.post('/', async (c) => {
     );
   }
 
-  let payload: { id?: unknown; apiKeyId?: unknown; type?: unknown; data?: unknown };
+  let payload: {
+    id?: unknown;
+    apiKeyId?: unknown;
+    type?: unknown;
+    data?: unknown;
+    merchantId?: unknown;
+  };
   try {
     payload = JSON.parse(rawBody);
   } catch {
@@ -115,6 +122,32 @@ inbound.post('/', async (c) => {
     );
   }
 
+  let merchantId: string | undefined;
+  if (payload.merchantId !== undefined && payload.merchantId !== null) {
+    if (typeof payload.merchantId !== 'string' || payload.merchantId.length === 0) {
+      return c.json(
+        toGatewayErrorBody(
+          'webhook_error',
+          'invalid_payload',
+          'merchantId must be a non-empty string',
+        ),
+        400,
+      );
+    }
+    const merchant = await findActiveMerchant(payload.apiKeyId, payload.merchantId);
+    if (!merchant) {
+      return c.json(
+        toGatewayErrorBody(
+          'webhook_error',
+          'invalid_payload',
+          'merchantId is unknown, disabled, or not owned by this key',
+        ),
+        400,
+      );
+    }
+    merchantId = merchant.id;
+  }
+
   let result: Awaited<ReturnType<typeof dispatchEvent>>;
   try {
     result = await dispatchEvent({
@@ -122,6 +155,7 @@ inbound.post('/', async (c) => {
       type: payload.type as WebhookEventType,
       data: (payload.data ?? {}) as Prisma.InputJsonValue,
       sourceEventId: payload.id,
+      merchantId,
     });
   } catch (error) {
     console.error('[inbound-webhook] dispatch failed', error);

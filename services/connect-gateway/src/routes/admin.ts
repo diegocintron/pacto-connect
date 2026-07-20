@@ -1,5 +1,6 @@
 import type { KeyMode } from '@prisma/client';
 import { Hono } from 'hono';
+import { prisma } from '../db.js';
 import {
   createApiKey,
   cutoverApiKey,
@@ -8,6 +9,7 @@ import {
   revokeApiKey,
   rotateApiKey,
 } from '../keys.js';
+import { createMerchant, listMerchantsForApiKey, setMerchantStatus } from '../merchants.js';
 import { adminAuth } from '../middleware/admin.js';
 import { webhookRoutes } from './webhooks.js';
 
@@ -99,6 +101,38 @@ admin.post('/keys/:id/revoke', async (c) => {
   }
 
   return c.json({ key });
+});
+
+admin.post('/keys/:keyId/merchants', async (c) => {
+  const keyId = c.req.param('keyId');
+  const key = await prisma.apiKey.findUnique({ where: { id: keyId } });
+  if (!key) {
+    return c.json({ error: 'key not found' }, 404);
+  }
+  const body = await c.req.json<{ name?: string }>();
+  if (!body.name || typeof body.name !== 'string') {
+    return c.json({ error: 'name is required' }, 400);
+  }
+  const merchant = await createMerchant({ apiKeyId: keyId, name: body.name });
+  return c.json({ merchant }, 201);
+});
+
+admin.get('/keys/:keyId/merchants', async (c) => {
+  const keyId = c.req.param('keyId');
+  const key = await prisma.apiKey.findUnique({ where: { id: keyId } });
+  if (!key) {
+    return c.json({ error: 'key not found' }, 404);
+  }
+  const merchants = await listMerchantsForApiKey(keyId);
+  return c.json({ merchants });
+});
+
+admin.post('/merchants/:id/disable', async (c) => {
+  const merchant = await setMerchantStatus(c.req.param('id'), 'disabled');
+  if (!merchant) {
+    return c.json({ error: 'merchant not found' }, 404);
+  }
+  return c.json({ merchant });
 });
 
 export { admin as adminRoutes };

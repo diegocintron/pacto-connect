@@ -12,6 +12,7 @@ const mockEndpoint = {
   description: null,
   createdAt: new Date('2024-06-01T12:00:00.000Z'),
   updatedAt: new Date('2024-06-01T12:00:00.000Z'),
+  merchantId: null,
 };
 
 const mockEvent = {
@@ -21,6 +22,7 @@ const mockEvent = {
   data: { escrowId: 'esc_1' },
   sourceEventId: null,
   createdAt: new Date('2024-06-01T12:00:00.000Z'),
+  merchantId: null,
 };
 
 const mockDeliveryBase = {
@@ -134,11 +136,13 @@ describe('webhook delivery engine', () => {
         apiKeyId: 'key_1',
         type: 'escrow.created',
         data: { escrowId: 'esc_1' },
+        merchantId: null,
       },
     });
     expect(prisma.webhookEndpoint.findMany).toHaveBeenCalledWith({
       where: {
         apiKeyId: 'key_1',
+        merchantId: null,
         status: 'enabled',
         verified: true,
         enabledEvents: { has: 'escrow.created' },
@@ -146,6 +150,32 @@ describe('webhook delivery engine', () => {
     });
     expect(prisma.webhookDelivery.create).toHaveBeenCalledTimes(2);
     expect(result).toEqual({ eventId: 'wh_evt_1', deliveries: 2 });
+  });
+
+  it('dispatchEvent scopes endpoint lookup to the merchant when merchantId is set', async () => {
+    vi.mocked(prisma.webhookEvent.create).mockResolvedValue({
+      ...mockEvent,
+      merchantId: 'mrc_1',
+    } as never);
+    vi.mocked(prisma.webhookEndpoint.findMany).mockResolvedValue([]);
+    await dispatchEvent({
+      apiKeyId: 'key_1',
+      merchantId: 'mrc_1',
+      type: 'escrow.created',
+      data: {},
+    });
+    const findManyCall = vi.mocked(prisma.webhookEndpoint.findMany).mock.calls[0]?.[0];
+    const createCall = vi.mocked(prisma.webhookEvent.create).mock.calls[0]?.[0];
+    expect(findManyCall?.where?.merchantId).toBe('mrc_1');
+    expect(createCall?.data.merchantId).toBe('mrc_1');
+  });
+
+  it('dispatchEvent scopes to platform (merchantId null) when no merchantId', async () => {
+    vi.mocked(prisma.webhookEvent.create).mockResolvedValue(mockEvent as never);
+    vi.mocked(prisma.webhookEndpoint.findMany).mockResolvedValue([]);
+    await dispatchEvent({ apiKeyId: 'key_1', type: 'escrow.created', data: {} });
+    const findManyCall = vi.mocked(prisma.webhookEndpoint.findMany).mock.calls[0]?.[0];
+    expect(findManyCall?.where?.merchantId).toBeNull();
   });
 
   it('attemptDelivery succeeds and records deliveredAt', async () => {

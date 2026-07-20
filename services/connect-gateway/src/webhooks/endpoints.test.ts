@@ -69,6 +69,32 @@ describe('webhook endpoints service', () => {
     expect(result.id).toBe('wh_ep_new');
   });
 
+  it('registerEndpoint persists merchantId and exposes it', async () => {
+    vi.mocked(prisma.webhookEndpoint.create).mockResolvedValue({
+      id: 'wh_ep_m',
+      apiKeyId: 'key_1',
+      merchantId: 'mrc_1',
+      url: 'https://e.test/hook',
+      secret: 'whsec_x',
+      enabledEvents: ['escrow.created'],
+      status: 'enabled',
+      verified: false,
+      description: null,
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    } as never);
+    const ep = await registerEndpoint({
+      apiKeyId: 'key_1',
+      merchantId: 'mrc_1',
+      url: 'https://e.test/hook',
+      enabledEvents: ['escrow.created'],
+    });
+    expect(ep.merchantId).toBe('mrc_1');
+    expect(vi.mocked(prisma.webhookEndpoint.create).mock.calls[0]![0].data.merchantId).toBe(
+      'mrc_1',
+    );
+  });
+
   it('listEndpoints never exposes the secret', async () => {
     vi.mocked(prisma.webhookEndpoint.findMany).mockResolvedValue([
       mockWebhookEndpoint as WebhookEndpoint,

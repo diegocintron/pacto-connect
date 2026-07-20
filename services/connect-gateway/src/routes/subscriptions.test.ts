@@ -89,6 +89,7 @@ function buildSub(overrides: Partial<Subscription> = {}): Subscription {
     canceledAt: null,
     createdAt: now,
     updatedAt: now,
+    merchantId: null,
     ...overrides,
   };
 }
@@ -124,6 +125,7 @@ describe('subscription routes', () => {
       refreshCount: 0,
       createdAt: now,
       updatedAt: now,
+      merchantId: null,
     };
     vi.mocked(keys.findActiveApiKeyByPublishableKey).mockImplementation(async (pk: string) =>
       pk === liveApiKey.publishableKey ? liveApiKey : mockApiKey,
@@ -154,6 +156,7 @@ describe('subscription routes', () => {
     expect(emitSubscriptionCreated).toHaveBeenCalledWith(
       'key_1',
       expect.objectContaining({ subscriptionId: 'sub_1' }),
+      undefined,
     );
     expect(emitSubscriptionCreated).toHaveBeenCalledTimes(1);
   });
@@ -240,6 +243,7 @@ describe('subscription routes', () => {
     expect(emitSubscriptionCanceled).toHaveBeenCalledWith(
       'key_1',
       expect.objectContaining({ subscriptionId: 'sub_1' }),
+      undefined,
     );
     expect(emitSubscriptionCanceled).toHaveBeenCalledTimes(1);
   });
